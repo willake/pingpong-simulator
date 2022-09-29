@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "./src/PingPong/Python",
+        "./src/PingPong/Submission"
+    ],
+    "editor.formatOnSave": false
+}
