@@ -1,4 +1,5 @@
 import logging
+from math import isclose
 from msilib import sequence
 from shutil import move
 import numpy as np1
@@ -71,7 +72,7 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
     # and we could get two answer of t, and t should between 0 and 1
     # since we have a probably answer, we could assert whether B is between PQ
     # the equation is distance(BP) + distance(BQ) = distance(PQ)
-    
+
     ax = snap1.ball.x
     ay = snap1.ball.y
     bx = snap2.ball.x - snap1.ball.x
@@ -89,8 +90,12 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
     B = dx*ey+cx*fy-bx*ey-ax*fy-dx*ay-cx*by-dy*ex-cy*fx+by*ex+ay*fx+dy*ax+cy*bx
     C = cx*ey-ax*ey-cx*ay-cy*ex+ay*ex+cy*ax
 
-    if not A < 0 and not A > 0 :
-        if not B < 0 and not B > 0:
+    t = 0
+    # normally t = -B +- sqrt(B**2 - 4 * A * C) / 2A
+    # if A = 0 then t = -B/C
+    # if A = 0 and B = 0 then there is no answer
+    if math.isclose(A, 0) :
+        if math.isclose(B, 0):
             return None
         else:
             t = -C/B
@@ -103,16 +108,15 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
     t1 = (-B+math.sqrt(d))/(2*A)
     t2 = (-B-math.sqrt(d))/(2*A)
 
-    if not t1<0 and not t1>1 :
+    # one of t should between 0 and 1
+    if not t1 < 0 and not t1 > 1 :
         return Second((snap1.time+(snap2.time-snap1.time)*(t1)))
-    elif not t2<0 and not t2>1 :
+    elif not t2 < 0 and not t2 > 1 :
         return Second((snap1.time+(snap2.time-snap1.time)*(t2)))
     else :
         return None
-
+        
 # Exercise 3
-
-
 def controlArm(time: Second, control: Control, arm: Arm) -> Arm:
     return arm
 

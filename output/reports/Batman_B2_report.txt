@@ -4,7 +4,7 @@ report for Batman, assignment B2
 [case 2/5] success: 3/3 points | correct result: collision at time 5.0e-2
 [case 3/5] success: 3/3 points | correct result: collision at time 0.43
 [case 4/5] success: 2/2 points | correct result: no collision
-[case 5/5] success: 3/3 points | correct result: collision at time 80.9017
+[case 5/5] success: 0/3 points | incorrect result: no collision should have been collision at time 80.9017
 --------------------------------------------------------------------------------
-13 points out of 13 possible
-grade: 10.0
+10 points out of 13 possible
+grade: 7.69
