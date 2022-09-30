@@ -1,3 +1,6 @@
+# Alkiviadis Pavlou(2025930), Hui En Lin(8098735)
+# PingPong Simulator v3.1.2
+# Assignment B2
 import logging
 import numpy as np
 from typing import Optional, Tuple
@@ -9,12 +12,12 @@ LOGGING_LEVEL = logging.ERROR
 
 NUMLINKS = 4
 
-BAT_COLOR = "#341235"
+BAT_COLOR = "#242424"
 
-LINK_COLORS = ["#a111b2"] * NUMLINKS
+LINK_COLORS = ["#242424", "#7f8086", "#7f8086", "#7f8086"] * NUMLINKS
 LINK_LENGTHS = [0.3] * NUMLINKS
 
-JOINT_COLORS = ["#777777"] * NUMLINKS
+JOINT_COLORS = ["#fdff00", "#505c7c", "#242424", "#fdff00"]
 JOINT_ANGLES = [-0.7, 1.2, 1.0, -0.5]
 
 # Exercise 1
