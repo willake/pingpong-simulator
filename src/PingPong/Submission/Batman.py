@@ -1,8 +1,5 @@
 import logging
-from math import isclose
-from msilib import sequence
-from shutil import move
-import numpy as np1
+import numpy as np
 from typing import Optional, Tuple
 from PPData import *
 
@@ -90,7 +87,6 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
     B = dx*ey+cx*fy-bx*ey-ax*fy-dx*ay-cx*by-dy*ex-cy*fx+by*ex+ay*fx+dy*ax+cy*bx
     C = cx*ey-ax*ey-cx*ay-cy*ex+ay*ex+cy*ax
 
-    t = 0
     # normally t = -B +- sqrt(B**2 - 4 * A * C) / 2A
     # if A = 0 then t = -B/C
     # if A = 0 and B = 0 then there is no answer
@@ -100,19 +96,57 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
         else:
             t = -C/B
             if not t < 0 and not t > 1:
-                return Second((snap1.time+(snap2.time-snap1.time)*(t)))
+
+                # check dist(BP) + dist(BQ) = dist(PQ)
+                Ball = snap1.ball + ((snap2.ball - snap1.ball) * t)
+                P = snap1.segment.p + ((snap2.segment.p - snap1.segment.p) * t)
+                Q = snap1.segment.q + ((snap2.segment.q - snap1.segment.q) * t)
+
+                VB = np.array((Ball.x, Ball.y))
+                VP = np.array([P.x, P.y])
+                VQ = np.array([Q.x, Q.y])
+
+                BP = np.linalg.norm(VP - VB)
+                BQ = np.linalg.norm(VQ - VB)
+                PQ = np.linalg.norm(VQ - VP)
+
+                if math.isclose((BP + BQ) - PQ, 0) :
+                    return Second((snap1.time+(snap2.time-snap1.time)*(t)))
+                else :
+                    return None
             else:
                 return None
 
     d = (B*B)-(4*A*C)
+    t = 0
     t1 = (-B+math.sqrt(d))/(2*A)
     t2 = (-B-math.sqrt(d))/(2*A)
 
     # one of t should between 0 and 1
     if not t1 < 0 and not t1 > 1 :
-        return Second((snap1.time+(snap2.time-snap1.time)*(t1)))
+        # return Second((snap1.time+(snap2.time-snap1.time)*(t1)))
+        t = t1
     elif not t2 < 0 and not t2 > 1 :
-        return Second((snap1.time+(snap2.time-snap1.time)*(t2)))
+        # return Second((snap1.time+(snap2.time-snap1.time)*(t2)))
+        t = t2
+    else :
+        return None
+
+    # check dist(BP) + dist(BQ) = dist(PQ)
+    Ball = snap1.ball + ((snap2.ball - snap1.ball) * t)
+    P = snap1.segment.p + ((snap2.segment.p - snap1.segment.p) * t)
+    Q = snap1.segment.q + ((snap2.segment.q - snap1.segment.q) * t)
+
+    VB = np.array((Ball.x, Ball.y))
+    VP = np.array([P.x, P.y])
+    VQ = np.array([Q.x, Q.y])
+
+    BP = np.linalg.norm(VP - VB)
+    BQ = np.linalg.norm(VQ - VB)
+    PQ = np.linalg.norm(VQ - VP)
+    
+    if math.isclose((BP + BQ) - PQ, 0) :
+        return Second((snap1.time+(snap2.time-snap1.time)*(t)))
     else :
         return None
         

@@ -42,10 +42,10 @@ main = do
   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
 
   -- If you want to test the collision and control behaviour of your submission in the simulator:
-  -- playWithSubmission submission p1 p2
+  playWithSubmission submission p1 p2
 
   -- If you want to test the automatic grader on your submission:
   -- gradeSubmission "B1" submission
-  gradeSubmission "B2" submission
+  -- gradeSubmission "B2" submission
 
   return ()
