@@ -47,5 +47,6 @@ main = do
   -- If you want to test the automatic grader on your submission:
   -- gradeSubmission "B1" submission
   -- gradeSubmission "B2" submission
+  -- gradeSubmission "B3" submission
 
   return ()

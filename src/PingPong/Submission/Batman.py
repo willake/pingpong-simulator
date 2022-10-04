@@ -14,7 +14,7 @@ NUMLINKS = 4
 
 BAT_COLOR = "#242424"
 
-LINK_COLORS = ["#242424", "#7f8086", "#7f8086", "#7f8086"] * NUMLINKS
+LINK_COLORS = ["#242424", "#7f8086", "#7f8086", "#7f8086"]
 LINK_LENGTHS = [0.3] * NUMLINKS
 
 JOINT_COLORS = ["#fdff00", "#505c7c", "#242424", "#fdff00"]
@@ -127,10 +127,8 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
 
     # one of t should between 0 and 1
     if not t1 < 0 and not t1 > 1 :
-        # return Second((snap1.time+(snap2.time-snap1.time)*(t1)))
         t = t1
     elif not t2 < 0 and not t2 > 1 :
-        # return Second((snap1.time+(snap2.time-snap1.time)*(t2)))
         t = t2
     else :
         return None
@@ -157,14 +155,34 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
 def controlArm(time: Second, control: Control, arm: Arm) -> Arm:
     return arm
 
-
 def evaluateArm(arm: Arm) -> List[Pnt]:
     lengths = [link.llen for link, _ in arm.comp]
-    pnts = [Pnt(0, 0)]
+    pnts = [Pnt(0,0)]
     for l in lengths:
-        pnts.append(pnts[-1] + Pnt(0, l))
-    pnts.append(pnts[-1] + Pnt(0, 0.1))
+        pnts.append(pnts[-1] + Pnt(0,l))
+    pnts.append(pnts[-1] + Pnt(0,0.1)) 
     return pnts
+
+# def evaluateArm(arm: Arm) -> List[Pnt]:
+#     lengths = [link.llen for link, _ in arm.comp]
+#     angles = [joint.jang for _, joint in arm.comp]
+    
+#     pnts = [Pnt(0, 0)]
+#     index = 0
+#     angle = 0
+
+#     # x = l1 c(θ1) + l2 c(θ1 + θ2) + l3 c(θ1 + θ2 + θ3)...
+#     # y = l1 s(θ1) + l2 s(θ1 + θ2) + l3 s(θ1 + θ2 + θ3)...
+#     for l in lengths:
+#         pnt = pnts[index]
+#         angle += angles[index]
+#         pnt.x += l * math.cos(angle)
+#         pnt.y += l * math.sin(angle)
+#         pnts.append(pnt)
+#         index += 1
+
+#     pnts.append(pnts[-1] + Pnt(0, 0.1))
+#     return pnts
 
 
 def dance(time: Second, arm: Arm) -> Control:
