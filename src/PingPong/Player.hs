@@ -20,7 +20,6 @@ defaultPlayer = Player
   , initArm = link black 1 -* joint black 0 *- bat black
   , foot    = 1.5
   , prepare = return ()
-  , terminate = return ()
   , action  = const $ const $ const $ const $ return [0]
   , stretch = defaultStretch
   , dance   = defaultDance

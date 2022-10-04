@@ -367,14 +367,3 @@ collide' checker i (t0, b0, s0) (t1, b1, s1) = do
 
 
 
-
-
-
-
-
--- communication
-
-prepareAll :: IO ()
-prepareAll = do
-  spawnCommand ("killall python3")
-  threadDelay 100000  

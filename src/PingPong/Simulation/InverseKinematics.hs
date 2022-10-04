@@ -1,6 +1,6 @@
 module PingPong.Simulation.InverseKinematics where
 
--- implementation of forward kinematics 
+-- implementation of inverse kinematics 
 
 import Data.Geometry hiding (init, zero)
 import Data.Geometry.Matrix
@@ -21,3 +21,6 @@ import PingPong.Model
 import PingPong.Simulation.ForwardKinematics
 
 
+
+inverse :: Arm -> Seg -> Maybe [Radian]
+inverse arm seg = error "inverse not implemented"

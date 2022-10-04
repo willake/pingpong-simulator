@@ -36,7 +36,6 @@ data IOSubmission = IOSubmission
     isNative          :: Bool
     -- B1
   , prepare           :: IO (String, Arm)
-  , terminate         :: IO ()
     -- B2
   , detectCollisionIO :: Snapshot -> Snapshot -> IO (Maybe Second)
     -- B3
@@ -57,7 +56,6 @@ nativeToIOSubmission :: Submission -> IOSubmission
 nativeToIOSubmission sub = IOSubmission
   { isNative          = True
   , prepare           = return (name sub, arm sub)
-  , terminate         = return ()
   , detectCollisionIO = compose2 return $ detectCollision sub
   , handleCollisionIO = compose3 return $ handleCollision sub
   , controlArmIO      = compose3 return $ controlArm sub
@@ -79,7 +77,6 @@ makePlayer sub = do
     , Player.initArm   = a
     , Player.foot      = 1.5
     , Player.prepare   = return () -- should not be needed anymore...?
-    , Player.terminate = terminate sub
     , Player.dance     = danceIO sub
     , Player.stretch   = defaultStretch
     , Player.action    = \s (_, i) b a -> actionIO sub s i a b

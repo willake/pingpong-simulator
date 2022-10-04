@@ -3,7 +3,7 @@ module PingPong.Submissions where
 -- | This module collects all submissions.
 
 import PingPong.Submission
-import PingPong.Communication.Socket
+import PingPong.Communication.Interface
 
 import System.Directory
 import System.FilePath
@@ -40,11 +40,7 @@ foreignSubmissions = do
   files <- listDirectory "src/PingPong/Submission/"
   let pythonFiles   = filter isPython files
       pythonModules = map dropExtension pythonFiles
-  return $ zipWith readSocketSubmission uniquePorts pythonModules
-
--- A list of unique port ids to be used for distinct submissions.
-uniquePorts :: [Int]
-uniquePorts = [6175 ..]
+  return $ map readInterfaceSubmission pythonModules
 
 -- | Python submissions are expected to end in ".py", otherwise will be ignored.
 isPython :: FilePath -> Bool

@@ -5,7 +5,7 @@ import PingPong.Grading.B2.Types
 import PingPong.Model hiding (score)
 import PingPong.Grading.Types
 import PingPong.Submission
-import PingPong.Communication.Socket
+import PingPong.Communication.Interface
 
 import Data.Geometry hiding (init, head, replicate)
 import Data.Ext
@@ -49,7 +49,7 @@ checkSubmission sub ref = do
   testCollision detector testcase
 
 testCollision :: ((Second, Pnt, Seg) -> (Second, Pnt, Seg) -> IO (Maybe Second)) -> TestCase -> IO TestResult
-testCollision detector (ref, (state1, state2), correctAnswer) = handle catchSocketException $ do
+testCollision detector (ref, (state1, state2), correctAnswer) = handle catchInterfaceException $ do
   givenAnswer <- detector state1 state2
   let correct = correctAnswer ~= givenAnswer
       sco | correct   = value ref
@@ -63,8 +63,8 @@ testCollision detector (ref, (state1, state2), correctAnswer) = handle catchSock
                           }
   return result
 
-catchSocketException :: SocketException -> IO TestResult
-catchSocketException e = return $ failure { message = show e }
+catchInterfaceException :: InterfaceException -> IO TestResult
+catchInterfaceException e = return $ failure { message = show e }
 
 writeCollisionOutput :: TestOutput -> String
 writeCollisionOutput Nothing = "no collision"

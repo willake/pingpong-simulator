@@ -153,6 +153,11 @@ parseSeg :: Pnt -> Pnt -> Seg
 parseSeg p q = OpenLineSegment (p :+ ()) (q :+ ())
 
 -- Direct parser for messages
+parseSetup s = flip parseEither s $ \obj -> do
+                    name <- obj .: "name" :: Parser String
+                    arm <- obj .: "arm" :: Parser Arm
+                    return (name, arm)
+
 parseControl c = flip parseEither c $ \obj -> do
                      control <- obj .: "control" :: Parser Control
                      return control

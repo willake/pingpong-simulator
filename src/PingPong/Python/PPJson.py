@@ -92,3 +92,9 @@ def parse_action(data):
     state = BallState.from_json(data["state"])
 
     return time, item, update, state
+
+def parse_inverse(data):
+    arm = Arm.from_json(data["arm"])    
+    seg = Seg.from_json(data["segment"])
+
+    return arm, seg

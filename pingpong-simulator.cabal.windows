@@ -124,12 +124,14 @@ executable pingpong-simulator-exe
     , pingpong-simulator
   default-language: Haskell2010
   c-sources:       
-    src/PingPong/C/player.c
+      src/PingPong/C/player.c
   include-dirs:
       src/PingPong/C/
-    , /usr/include/python3.YOURVERSION/
+    , C:\Users\YOURUSER\AppData\Local\Programs\Python\Python3YOURVERSION\include
+  extra-lib-dirs:
+    C:\Users\YOURUSER\AppData\Local\Programs\Python\Python3YOURVERSION
   extra-libraries:
-    python3.YOURVERSION
+    python3
 
 
 test-suite pingpong-simulator-test

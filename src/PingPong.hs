@@ -1,52 +1,44 @@
 module PingPong where
 
--- import           PingPong.Simulation.Recording
+import           PingPong.Model
 
-import Data.Aeson
-import PingPong.Communication.JSON
-import PingPong.Communication.Socket
-import PingPong.Grading
-import PingPong.Model
-import PingPong.Player
-import PingPong.Simulation.Realtime
-import PingPong.Submission
+-- import           PingPong.Simulation.Recording
+import           PingPong.Simulation.Realtime
+import           PingPong.Player
+
+import           PingPong.Submission
 import qualified PingPong.Submission.ExampleNativeSubmission as ExampleNativeSubmission
 
+import           PingPong.Communication.Interface
+import           PingPong.Communication.JSON
+import           Data.Aeson
+
 -- If your player is implemented in Haskell use the following:
-{-
-main :: IO ()
-main = do
 
-  -- Change this to your own submission.
-  let submission = nativeToIOSubmission ExampleNativeSubmission.submission
 
-  p1 <- makePlayer submission
-  p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
+-- main :: IO ()
+-- main = do
+--   let submission = nativeToIOSubmission ExampleNativeSubmission.submission
 
--- If you want to test the collision and control behaviour of your submission in the simulator:
-  playWithSubmission submission p1 p2
+--   p1 <- makePlayer submission
+--   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
 
--- If you want to test the automatic grader on your submission:
---  gradeSubmission "B1" submission
+--   playWithSubmission submission p1 p2
+-- --  danceContest submission p1 p2
+-- --  gradeSubmission "B2" submission
 
-  return ()
--}
+--   return ()
 
 -- If your player is implemented in Python use the following:
 main :: IO ()
 main = do
-  -- Change this to your own submission.
-  let submission = readSocketSubmission 6174 "Batman"
+  let submission = readInterfaceSubmission "Batman"
 
   p1 <- makePlayer submission
   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
 
-  -- If you want to test the collision and control behaviour of your submission in the simulator:
   playWithSubmission submission p1 p2
-
-  -- If you want to test the automatic grader on your submission:
-  -- gradeSubmission "B1" submission
-  -- gradeSubmission "B2" submission
-  -- gradeSubmission "B3" submission
+--  danceContest submission p1 p2
+--  gradeSubmission "B2" submission
 
   return ()

@@ -18,6 +18,8 @@ import Graphics.Gloss.Data.ViewPort
 
 import Graphics.Text.TrueType( Font, loadFontFile )
 
+import Data.Geometry
+
 simulationRate :: Int
 simulationRate = 50
 
@@ -65,6 +67,25 @@ realtimeUpdate sub p f os = do
 endGame :: State -> IO ()
 endGame st = do
   putStrLn $ "ending game"
-  terminate $ p1 st
-  terminate $ p2 st
   exitSuccess
+
+danceContest :: IOSubmission -> Player -> Player -> IO ()
+danceContest sub ip1 ip2 = do
+  Right font <- loadFontFile "fonts/lato/Lato-Bold.ttf"  
+  let pwhite   = PixelRGBA8 255 255 255 255
+  image <- createMutableImage 1920 1080 pwhite
+  prepare ip1
+  prepare ip2
+  validatePlayer ip1
+  validatePlayer ip2
+  let initialState = defState { phase = AfterGame 60
+                              , p1 = ip1, p2 = ip2
+                              , score = (0, 0)
+                              , ball  = BallState (Point2 (-1) 0.6) (Vector2 0.4 1)
+                              }
+  simulateIO windowDisplay
+             white
+             simulationRate
+             initialState
+             (drawState (evaluateArmIO sub) font image)
+             (realtimeUpdate sub)

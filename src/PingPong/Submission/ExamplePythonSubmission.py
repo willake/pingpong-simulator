@@ -10,11 +10,11 @@ NUMLINKS     = 4
 
 BAT_COLOR    = "#341235"
 
-LINK_COLORS  = ["#a111b2"] * NUMLINKS
-LINK_LENGTHS = [0.3]       * NUMLINKS
+LINK_COLORS  = ["#a111b2"]  *  NUMLINKS
+LINK_LENGTHS = [0.45, 0.15, 0.15, 0.15]
 
 JOINT_COLORS = ["#777777"] * NUMLINKS
-JOINT_ANGLES = [-0.7, 1.2, 1.0, -0.5]
+JOINT_ANGLES = [-0.3, 0.2, 0.2, -0.1]
 
 #Exercise 1
 def name() -> str:
@@ -47,11 +47,11 @@ def evaluateArm(arm: Arm) -> List[Pnt]:
     return pnts
 
 def dance(time: Second, arm: Arm) -> Control:
-    return [ -2 * math.sin (2.2 * time)
-            , -2 * math.cos (2.3 * time)
-            ,  2 * math.sin (2.4 * time)
-            ,  2 * math.cos (2.5 * time)
-            ]
+    return [   20 * math.sin (6.0 * time)
+           ,  -20 * math.cos (6.0 * time)
+           ,   20 * math.sin (6.0 * time)
+           ,  -20 * math.cos (6.0 * time)
+           ]
 
 #Exercise 4
 def handleCollision(snap1: Snapshot, snap2: Snapshot, time: Second) -> Tuple[Pnt, Vec]:

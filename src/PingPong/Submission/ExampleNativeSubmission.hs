@@ -8,11 +8,15 @@ import PingPong.Model hiding (name, arm, dance, plan, action)
 import PingPong.Player
 import qualified PingPong.Submission as Submission
 
-import PingPong.Simulation.Collision
+import PingPong.Simulation.Collision hiding (modelHandler, modelDetector)
 
+import Control.Lens
+
+import Data.Geometry
+import Data.Ext
+import Data.List hiding (intersect)
 import Data.Colour
 import Data.Colour.Names
-
 -- Collect all exercises in a single record.
 submission = Submission.Submission
   { Submission.name            = name
@@ -34,10 +38,10 @@ name :: String
 name = "Example Native Player"
 
 arm  :: Arm
-arm = link (gradient 0.1) 0.35 -* joint (gradient 0.2) (-0.3)
-   *- link (gradient 0.3) 0.2  -* joint (gradient 0.4) ( 0.2)
-   *- link (gradient 0.5) 0.2  -* joint (gradient 0.6) ( 0.2)
-   *- link (gradient 0.7) 0.2  -* joint (gradient 0.8) (-0.1)
+arm = link (gradient 0.1) 0.45 -* joint (gradient 0.2) (-0.3)
+   *- link (gradient 0.3) 0.15 -* joint (gradient 0.4) ( 0.2)
+   *- link (gradient 0.5) 0.15 -* joint (gradient 0.6) ( 0.2)
+   *- link (gradient 0.7) 0.15 -* joint (gradient 0.8) (-0.1)
    *- bat  (gradient 0.9)
 
 gradient :: Float -> Colour Float
@@ -57,10 +61,10 @@ evaluateArm :: Arm -> [Point 2 Float]
 evaluateArm = map (Point2 0) . scanl (+) 0 . map llen . armLinks
 
 dance :: Second -> Arm -> Control
-dance t _ = [ -2 * sin (2.2 * t)
-            , -2 * cos (2.3 * t)
-            ,  2 * sin (2.4 * t)
-            ,  2 * cos (2.5 * t)
+dance t _ = [  20 * sin (6 * t)
+            , -20 * cos (5 * t)
+            ,  20 * sin (4 * t)
+            , -20 * cos (3 * t)
             ]
 
 -- FOR EXERCISE B4 --

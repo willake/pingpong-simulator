@@ -4,7 +4,7 @@ import PingPong.Model hiding (score, prepare, terminate)
 import PingPong.Grading.Types
 import PingPong.Submission
 import PingPong.Submissions (submissions)
-import PingPong.Communication.Socket
+import PingPong.Communication.Interface
 
 import Data.List
 import Data.Char

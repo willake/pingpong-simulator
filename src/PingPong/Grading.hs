@@ -6,7 +6,7 @@ import PingPong.Grading.Reports
 import PingPong.Grading.Assignments
 import PingPong.Submission
 import PingPong.Submissions (submissions)
-import PingPong.Communication.Socket
+import PingPong.Communication.Interface
 
 import Data.List
 import Data.Char
@@ -18,17 +18,7 @@ import Control.Exception
 main :: IO ()
 main = do
 
-{-
-  generateTestCases "B1"
-  generateTestCases "B2"
-  generateTestCases "B3"
-  generateTestCases "B4"
--}
-
-  gradeAssignment "B1"
   gradeAssignment "B2"
-  gradeAssignment "B3"
-  gradeAssignment "B4"
 
 -- TODO: move to module Grading.Main
 
@@ -47,27 +37,27 @@ gradeSubmission' i sub = do
   return $ zip cases results
 
 gradeSubmission :: Assignment -> IOSubmission -> IO [TestResult]
-gradeSubmission i sub = handle catchIOException $ handle catchSocketException $ do
+gradeSubmission i sub = handle catchIOException $ handle catchInterfaceException $ do
   (name, arm) <- prepare sub
-  let han = handle (catchSocketExceptionWithName name)
+  let han = handle (catchInterfaceExceptionWithName name)
           . handle (catchIOExceptionWithName name)
   putStrLn $ "checking submission " ++ name ++ " for assignment " ++ i
   han $ do
     cases   <- getTestCaseRefs i
     results <- han $ mapM (checkSubmission i (name, arm) sub) cases
     writeReport name i $ zip cases results
-    terminate sub
+    -- terminate sub
     return results
 
 
-catchSocketException :: SocketException -> IO [TestResult]
-catchSocketException e = do
+catchInterfaceException :: InterfaceException -> IO [TestResult]
+catchInterfaceException e = do
   putStrLn "unable to check submission (name unknown, prepare failed)"
   putStrLn $ show e
   return $ repeat failure {message = show e}
 
-catchSocketExceptionWithName :: String -> SocketException -> IO [TestResult]
-catchSocketExceptionWithName name e = do
+catchInterfaceExceptionWithName :: String -> InterfaceException -> IO [TestResult]
+catchInterfaceExceptionWithName name e = do
   putStrLn $ "unable to check submission " ++ name
   putStrLn $ show e
   return $ repeat failure {message = show e}

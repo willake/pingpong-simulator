@@ -3,7 +3,7 @@ module PingPong.Grading.B4.Checker (getTestCaseRefs, checkSubmission) where
 import PingPong.Model hiding (score)
 import PingPong.Grading.Types
 import PingPong.Submission
-import PingPong.Communication.Socket
+import PingPong.Communication.Interface
 
 import Data.Geometry hiding (init, head, replicate)
 import Data.Ext
@@ -66,13 +66,13 @@ writeCollisionOutput :: TestOutput -> String
 writeCollisionOutput (p, v) = "collision at location " ++ show p ++ " resulting in direction " ++ show v
 
 
-catchSocketException :: SocketException -> IO TestResult
-catchSocketException e = return $ failure { message = show e }
+catchInterfaceException :: InterfaceException -> IO TestResult
+catchInterfaceException e = return $ failure { message = show e }
 
 
 
 testCollision :: ((Second, Pnt, Seg) -> (Second, Pnt, Seg) -> Second -> IO (Pnt, Vec)) -> TestCase -> IO TestResult
-testCollision handler (ref, (state1, state2, t), correctAnswer) = handle catchSocketException $ do
+testCollision handler (ref, (state1, state2, t), correctAnswer) = handle catchInterfaceException $ do
   givenAnswer <- handler state1 state2 t
   let correctPnt = fst correctAnswer ~= fst givenAnswer
       correctVec = snd correctAnswer ~= snd givenAnswer

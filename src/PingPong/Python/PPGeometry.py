@@ -89,7 +89,7 @@ class Vec:
     def __eq__(self, v):
         return math.isclose(self.a, v.a) and math.isclose(self.b, v.b)
 
-def angle(u: float, v: float) -> float:
+def angle(u: Vec, v: Vec) -> float:
     return math.atan2(u.a * v.b - u.b * v.a, u.a * v.a + u.b * v.b)
 
 #########################

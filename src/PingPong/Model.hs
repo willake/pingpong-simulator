@@ -131,8 +131,6 @@ data Player = Player
     --   Can for instance be used for setting up infrastructure for communication.
   , prepare   :: IO ()
     -- | This method is called once at the end of the game.
-    --   Used to clean up things created in 'prepare'.
-  , terminate :: IO ()
     -- | Provides the action that the robotic arm should perform given
     -- the current state of the world and its own position in space.
   , action    :: Second -> Hit -> BallState -> Arm -> IO Control
