@@ -1,6 +1,0 @@
-report for Batman, assignment B1
---------------------------------------------------------------------------------
-[case 1/1] success: 1/1 points | congratulations, everything seems to work so far!
---------------------------------------------------------------------------------
-1 points out of 1 possible
-grade: 10.0
