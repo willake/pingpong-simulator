@@ -122,6 +122,11 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
 
     d = (B*B)-(4*A*C)
     t = 0
+    
+    # return none when d is negative since a negative number can not do sqrt
+    if d < 0:
+        return None
+
     t1 = (-B+math.sqrt(d))/(2*A)
     t2 = (-B-math.sqrt(d))/(2*A)
 
@@ -157,32 +162,30 @@ def controlArm(time: Second, control: Control, arm: Arm) -> Arm:
 
 def evaluateArm(arm: Arm) -> List[Pnt]:
     lengths = [link.llen for link, _ in arm.comp]
-    pnts = [Pnt(0,0)]
+    angles = [joint.jang for _, joint in arm.comp]
+    angles.insert(0, 90)
+    pnts = [Pnt(0, 0)]
+    index = 0
+    angle = 0
+
+    # x = l1 c(θ1) + l2 c(θ1 + θ2) + l3 c(θ1 + θ2 + θ3)...
+    # y = l1 s(θ1) + l2 s(θ1 + θ2) + l3 s(θ1 + θ2 + θ3)...
     for l in lengths:
-        pnts.append(pnts[-1] + Pnt(0,l))
-    pnts.append(pnts[-1] + Pnt(0,0.1)) 
+        pnt = Pnt(pnts[index].x, pnts[index].y)
+        angle += angles[index]
+        pnt.x += l * math.cos(angle)
+        pnt.y += l * math.sin(angle)
+        pnts.append(pnt)
+        index += 1
+
+    # bat
+    pnt = Pnt(pnts[index].x, pnts[index].y)
+    angle += angles[index]
+    pnt.x += arm.bat.llen * math.cos(angle)
+    pnt.y += arm.bat.llen * math.sin(angle)
+    pnts.append(pnt)
+
     return pnts
-
-# def evaluateArm(arm: Arm) -> List[Pnt]:
-#     lengths = [link.llen for link, _ in arm.comp]
-#     angles = [joint.jang for _, joint in arm.comp]
-    
-#     pnts = [Pnt(0, 0)]
-#     index = 0
-#     angle = 0
-
-#     # x = l1 c(θ1) + l2 c(θ1 + θ2) + l3 c(θ1 + θ2 + θ3)...
-#     # y = l1 s(θ1) + l2 s(θ1 + θ2) + l3 s(θ1 + θ2 + θ3)...
-#     for l in lengths:
-#         pnt = pnts[index]
-#         angle += angles[index]
-#         pnt.x += l * math.cos(angle)
-#         pnt.y += l * math.sin(angle)
-#         pnts.append(pnt)
-#         index += 1
-
-#     pnts.append(pnts[-1] + Pnt(0, 0.1))
-#     return pnts
 
 
 def dance(time: Second, arm: Arm) -> Control:

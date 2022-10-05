@@ -27,14 +27,14 @@ catchIO :: IO a -> (Exception.IOException -> IO a) -> IO a
 catchIO = Exception.catch
 
 version :: Version
-version = Version [0,3,1,2] []
+version = Version [0,3,1,3] []
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 
 bindir     = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\bin"
-libdir     = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\lib\\x86_64-windows-ghc-9.0.2\\pingpong-simulator-0.3.1.2-KtnDO6ySYrX1qs3kHbo9zk"
+libdir     = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\lib\\x86_64-windows-ghc-9.0.2\\pingpong-simulator-0.3.1.3-5r6jbkCdMrU3QoL64hl428"
 dynlibdir  = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\lib\\x86_64-windows-ghc-9.0.2"
-datadir    = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\share\\x86_64-windows-ghc-9.0.2\\pingpong-simulator-0.3.1.2"
-libexecdir = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\libexec\\x86_64-windows-ghc-9.0.2\\pingpong-simulator-0.3.1.2"
+datadir    = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\share\\x86_64-windows-ghc-9.0.2\\pingpong-simulator-0.3.1.3"
+libexecdir = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\libexec\\x86_64-windows-ghc-9.0.2\\pingpong-simulator-0.3.1.3"
 sysconfdir = "E:\\uu\\Motion and Manipulation\\simulators\\pingpong-simulator-0312-experimental\\.stack-work\\install\\1aa4ad29\\etc"
 
 getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: IO FilePath
