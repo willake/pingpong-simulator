@@ -12,6 +12,7 @@ import qualified PingPong.Submission.ExampleNativeSubmission as ExampleNativeSub
 import           PingPong.Communication.Interface
 import           PingPong.Communication.JSON
 import           Data.Aeson
+import PingPong.Grading
 
 -- If your player is implemented in Haskell use the following:
 
@@ -37,8 +38,8 @@ main = do
   p1 <- makePlayer submission
   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
 
-  playWithSubmission submission p1 p2
---  danceContest submission p1 p2
---  gradeSubmission "B2" submission
+  -- playWithSubmission submission p1 p2
+  --  danceContest submission p1 p2
+  gradeSubmission "B3" submission
 
   return ()

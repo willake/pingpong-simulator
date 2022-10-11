@@ -1,10 +1,10 @@
 # Alkiviadis Pavlou(2025930), Hui En Lin(8098735)
-# PingPong Simulator v3.1.2
-# Assignment B2
+# PingPong Simulator v3.1.3
+# Assignment B3
 import logging
 import numpy as np
 from typing import Optional, Tuple
-from PPData import *
+from PPData import * 
 
 # Change to adapt the level of ouput from the python server:
 # Values are DEBUG, INFO, ERROR
@@ -158,12 +158,28 @@ def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
         
 # Exercise 3
 def controlArm(time: Second, control: Control, arm: Arm) -> Arm:
+    length = len(arm.comp)
+    joints = [joint for _ , joint in arm.comp]
+    for index in range(length):
+        
+        acceleration = float(control.accelerations[index])
+
+        if acceleration > 5.0:
+                acceleration = 5.0
+        v = joints[index].jvel + (acceleration * time)
+        
+        if v > 2.0:
+            v = 2.0
+        
+        joints[index].jvel = v
+        joints[index].jang = joints[index].jang + (v * time)
+        
     return arm
 
 def evaluateArm(arm: Arm) -> List[Pnt]:
     lengths = [link.llen for link, _ in arm.comp]
     angles = [joint.jang for _, joint in arm.comp]
-    angles.insert(0, 90)
+    angles.insert(0, math.pi / 2)
     pnts = [Pnt(0, 0)]
     index = 0
     angle = 0
