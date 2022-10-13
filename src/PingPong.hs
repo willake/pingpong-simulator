@@ -33,13 +33,13 @@ import PingPong.Grading
 -- If your player is implemented in Python use the following:
 main :: IO ()
 main = do
-  let submission = readInterfaceSubmission "Batman"
+  let submission = readInterfaceSubmission "BatmanB4"
 
   p1 <- makePlayer submission
   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
 
   -- playWithSubmission submission p1 p2
   --  danceContest submission p1 p2
-  gradeSubmission "B3" submission
+  gradeSubmission "B4" submission
 
   return ()
