@@ -36,7 +36,7 @@ def make_arm() -> Arm:
 
     return arm
 
-#Exercise 2
+#Exercise 2, best practice provided by lecturers
 def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
     pocos = potentialCollisions(snap1, snap2)
     time = None
@@ -212,68 +212,47 @@ def dance(time: Second, arm: Arm) -> Control:
             ]
 
 # Exercise 4
-
-
 def handleCollision(snap1: Snapshot, snap2: Snapshot, time: Second) -> Tuple[Pnt, Vec]:
-    b1, b2 = snap1.ball, snap2.ball
-    p1, p2 = snap1.segment.p, snap2.segment.p
-    q1, q2 = snap1.segment.q, snap2.segment.q
+    # convert to numpy array for better calculation
+    b1, b2 = PntToNparray(snap1.ball), PntToNparray(snap2.ball)
+    p1, p2 = PntToNparray(snap1.segment.p), PntToNparray(snap2.segment.p)
+    q1, q2 = PntToNparray(snap1.segment.q), PntToNparray(snap2.segment.q)
     t1, t2 = snap1.time, snap2.time
-    t = (time - t1) / (t2 - t1)
+    t = time - t1
     
-    # position of the collision
-    c = b1 + ((b2 - b1) * t)
-
     # velocity of the ball
     vb = (b2 - b1) / (t2 - t1)
 
-    # velocity of the segment
-    a1 = np.arctan2((q1 - p1).b, (q1 - p1).a)
-    a2 = np.arctan2((q2 - p2).b, (q2 - p2).a)
-    translationS = translation((p2 - p1) * t)
-    rotationS = rotation((a2 - a1) * t)
-    transformationS = np.matmul(translationS, rotationS)
-    c1 = np.matmul(np.linalg.inv(transformationS), np.array([c.x, c.y, 1]))
-    vs = (c - Pnt(c1[0], c1[1])) / (time - t1)
+    # position of the collision
+    c = b1 + (vb * t)
 
-    pv = (p2 - p1) / (t2 - t1)
-    qv = (q2 - q1) / (t2 - t1)
-    pp = p1 + (pv * t)
-    qq = q1 + (qv * t)
-    pqNorm = np.linalg.norm(np.array([(qq - pp).a, (qq - pp).b, 0]))
-    pcNorm = np.linalg.norm(np.array([(c - pp).a, (c - pp).b, 0]))
+    # velocity of the collision point
+    vp = (p2 - p1) / (t2 - t1)
+    vq = (q2 - q1) / (t2 - t1)
+    p = p1 + (vp * t)
+    q = q1 + (vq * t)
+    pqNorm = np.linalg.norm(q - p)
+    pcNorm = np.linalg.norm(c - p)
     pcWeight = pcNorm / pqNorm
-    vc = (pv * (1 - pcWeight)) + (qv * (pcWeight))
+    vc = (vp * (1 - pcWeight)) + (vq * (pcWeight))
 
-    # calculate the relative velocity
-    rv = np.array([
-        (vb - vc).a,
-        (vb - vc).b,
-        1
-    ])
+    # calculate the relative velocity, reverse the result to make it point toward normal vector
+    rv = -(vb - vc)
 
     # calculate the normal vector for reflect the relative velocity
-    p = np.matmul(transformationS, np.array([p1.x, p1.y, 1]))
-    q = np.matmul(transformationS, np.array([q1.x, q1.y, 1]))
     pq = (q - p) / np.linalg.norm((q - p)) # normalize the vector
 
-    # reflect rv about the segement
-    reflection = (-1 * rv) - (2 * np.dot((-1 * rv), pq) * pq)
+    # reflect rv about the segement, r = v - (2 * (v ‧ N) * N), which N is the normalized normal vector
+    reflection = rv - (2 * np.dot(rv, pq) * pq)
 
     # add the velocity of segment with the reflection vector
-    v = (reflection + np.array([vc.a, vc.b, 0]))
+    v = (reflection + vc)
 
-    print("=========")
-    print("pv: %s" % pv)
-    print("qv: %s" % qv)
-    print("vc: %s" % np.linalg.norm(np.array([vc.a, vc.b, 0])))
-    print("vs: %f" % np.linalg.norm(np.array([vs.a, vs.b, 0])))
-    print("related vector: %f" % np.linalg.norm(rv))
-    print("reflection vector: %f" % np.linalg.norm(reflection))
-    print("velocity: %f" % np.linalg.norm(np.array([v[0], v[1], 0])))
-    print("=========")
+    return (Pnt(c[0], c[1]), Vec(v[0], v[1]))
 
-    return (c, Vec(v[0], v[1]))
+# convert to numpy array for calculation
+def PntToNparray(p: Pnt):
+    return np.array([p.x, p.y, 0])
 
 # Exercise 5
 
