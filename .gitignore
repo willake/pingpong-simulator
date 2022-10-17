@@ -2,3 +2,4 @@ output
 *.*.pyc
 .stack-work
 .cabal
+.DS_Store
