@@ -127,10 +127,13 @@ executable pingpong-simulator-exe
     src/PingPong/C/player.c
   include-dirs:
       src/PingPong/C/
-    , /usr/include/python3.YOURVERSION/
+    , /Library/Frameworks/Python.framework/Versions/3.10/include/python3.10/
+  extra-lib-dirs:
+    /Library/Frameworks/Python.framework/Versions/3.10/lib
+  extra-framework-dirs:
+    /Library/Frameworks/Python.framework/Versions/3.10/lib
   extra-libraries:
-    python3.YOURVERSION
-
+    Python3.10
 
 test-suite pingpong-simulator-test
   type: exitcode-stdio-1.0

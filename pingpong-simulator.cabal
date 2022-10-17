@@ -124,15 +124,16 @@ executable pingpong-simulator-exe
     , pingpong-simulator
   default-language: Haskell2010
   c-sources:       
-      src/PingPong/C/player.c
+    src/PingPong/C/player.c
   include-dirs:
       src/PingPong/C/
-    , C:\Users\Willake\AppData\Local\Programs\Python\Python310\include
+    , /Library/Frameworks/Python.framework/Versions/3.10/include/python3.10/
   extra-lib-dirs:
-    C:\Users\Willake\AppData\Local\Programs\Python\Python310
+    /Library/Frameworks/Python.framework/Versions/3.10/lib
+  extra-framework-dirs:
+    /Library/Frameworks/Python.framework/Versions/3.10/lib
   extra-libraries:
-    python3
-
+    Python3.10
 
 test-suite pingpong-simulator-test
   type: exitcode-stdio-1.0
