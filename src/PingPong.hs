@@ -40,6 +40,6 @@ main = do
 
   -- playWithSubmission submission p1 p2
   --  danceContest submission p1 p2
-  gradeSubmission "B4" submission
+  gradeSubmission "B5" submission
 
   return ()

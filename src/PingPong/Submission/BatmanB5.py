@@ -5,9 +5,12 @@ import logging
 import numpy as np
 from typing import Optional, Tuple
 from PPData import * 
+from itertools import accumulate
 
 # Change to adapt the level of ouput from the python server:
 # Values are DEBUG, INFO, ERROR
+SPEED_CAP = 2.0
+ACCEL_CAP = 5.0
 LOGGING_LEVEL = logging.ERROR
 EPS = 0.0001
 
@@ -160,56 +163,96 @@ def solveQuadraticEq(a: float, b: float, c: float) -> List[float]:
     return res
         
 # Exercise 3
-def controlArm(time: Second, control: Control, arm: Arm) -> Arm:
-    length = len(arm.comp)
-    joints = [joint for _ , joint in arm.comp]
-    for index in range(length):
-        
-        acceleration = float(control.accelerations[index])
+EPS = 0.00000000001
 
-        if acceleration > 5.0:
-                acceleration = 5.0
-        v = joints[index].jvel + (acceleration * time)
-        
-        if v > 2.0:
-            v = 2.0
-        
-        joints[index].jvel = v
-        joints[index].jang = joints[index].jang + (v * time)
-        
+def almostZero(number: float) -> bool:
+    if abs(number) < EPS:
+        return True
+    return False
+
+def cap(real: float, capval: float) -> float:
+    realabs = abs(real)
+    if almostZero(realabs - capval) or realabs > capval:
+        if real < 0:
+            return -capval
+        return capval
+
+    return real
+
+def capspeed(speed: float) -> float:
+    return cap(speed, SPEED_CAP)
+
+def capaccel(accel: float) -> float:
+    return cap(accel, ACCEL_CAP)
+
+def controlArm(time: Second, control: Control, arm: Arm) -> Arm:
+    # Go through all joints and apply the acceleration
+    applyControl(time, control, arm)
+    
+    # Move the angle for each joint accordingly
+    advanceArm(time, arm)
+
     return arm
 
+def applyControl(time: Second, control: Control, arm: Arm) -> Arm:
+    for (_, joint), accel in zip(arm.comp, control.accelerations):
+        controlJoint(time, accel, joint)
+
+def controlJoint(time: Second, accel: RadianPerSquareSecond, joint: Joint):
+    joint.jvel = capspeed(joint.jvel + capaccel(accel) * time)
+
+def advanceArm(time: Second, arm: Arm):
+    for _, joint in arm.comp:
+        advanceJoint(time, joint)
+
+def advanceJoint(time: Second, joint: Joint):
+    joint.jang = joint.jang + joint.jvel * time
+
 def evaluateArm(arm: Arm) -> List[Pnt]:
-    lengths = [link.llen for link, _ in arm.comp]
-    angles = [joint.jang for _, joint in arm.comp]
-    angles.insert(0, math.pi / 2)
-    pnts = [Pnt(0, 0)]
-    index = 0
-    angle = 0
+    # Create transformation matrices
+    ts = makeGlobal(transformations(arm))
 
-    # x = l1 c(θ1) + l2 c(θ1 + θ2) + l3 c(θ1 + θ2 + θ3)...
-    # y = l1 s(θ1) + l2 s(θ1 + θ2) + l3 s(θ1 + θ2 + θ3)...
-    for l in lengths:
-        pnt = Pnt(pnts[index].x, pnts[index].y)
-        angle += angles[index]
-        pnt.x += l * math.cos(angle)
-        pnt.y += l * math.sin(angle)
-        pnts.append(pnt)
-        index += 1
+    # Find every point starting from (0,0) (as (0,0,1) in homogenous coordinates)
+    vs = [t @ np.array([[0.0],[0.0],[1.0]]) for t in ts]
 
-    # bat
-    pnt = Pnt(pnts[index].x, pnts[index].y)
-    angle += angles[index]
-    pnt.x += arm.bat.llen * math.cos(angle)
-    pnt.y += arm.bat.llen * math.sin(angle)
-    pnts.append(pnt)
+    # Remove doubled entries via dict.fromkeys and store as tuples of floats, also implicitly transforms from homogenous coordinates to 2D
+    single_pnts = list(dict.fromkeys(map(lambda v: (v[0][0], v[1][0]), vs)))
+
+    # Make points from the tuples
+    pnts = [Pnt(p[0], p[1]) for p in single_pnts]
 
     return pnts
 
+def makeGlobal(ts: list(np.array)):
+    gts = list(accumulate(ts, np.matmul, initial=identity()))
+    return gts
+
+def transformations(arm: Arm) -> list(np.array):
+    ts = []
+    for link, joint in arm.comp:
+        tlink, rjoint = transformation(link, joint)
+        ts.append(tlink)
+        ts.append(rjoint)
+
+    ts.append(transLink(arm.bat))
+
+    return ts
+
+def transformation(link: Link, joint: Joint) -> Tuple[np.array, np.array]:
+    return transLink(link), rotJoint(joint)
+
+def transLink(link: Link) -> np.array:
+    return translation(Vec(0, link.llen))
+
+def rotJoint(joint: Joint) -> np.array:
+    return rotation(joint.jang)
 
 def dance(time: Second, arm: Arm) -> Control:
-    return [-2 * math.sin(2.2 * time), -2 * math.cos(2.3 * time),  2 * math.sin(2.4 * time),  2 * math.cos(2.5 * time)
-            ]
+    return [   20 * math.sin (6.0 * time)
+           ,  -20 * math.cos (6.0 * time)
+           ,   20 * math.sin (6.0 * time)
+           ,  -20 * math.cos (6.0 * time)
+           ]
 
 # Exercise 4
 def handleCollision(snap1: Snapshot, snap2: Snapshot, time: Second) -> Tuple[Pnt, Vec]:
