@@ -1,11 +1,11 @@
 # Alkiviadis Pavlou(2025930), Hui En Lin(8098735)
 # PingPong Simulator v3.1.3
-# Assignment B4
+# Assignment B5
 import logging
 import numpy as np
 from typing import Optional, Tuple
 from PPData import * 
-from itertools import accumulate
+from itertools import accumulate, count
 
 # Change to adapt the level of ouput from the python server:
 # Values are DEBUG, INFO, ERROR
@@ -39,129 +39,6 @@ def make_arm() -> Arm:
 
     return arm
 
-#Exercise 2, best practice provided by lecturers
-def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
-    pocos = potentialCollisions(snap1, snap2)
-    time = None
-    for poco in pocos:
-        if validPoco(poco):
-            return collisionTime(snap1, snap2, poco[0])
-
-    return time
-
-def almostZero(number: float) -> bool:
-    return abs(number) < EPS
-
-def betweenZeroAndOne(number: float) -> bool:
-    return number >= 0 and number <= 1
-
-def validPoco(poco: List[float]) -> bool:
-    return betweenZeroAndOne(poco[0]) and betweenZeroAndOne(poco[1])
-
-def collisionTime(snap1: Snapshot, snap2: Snapshot, t: float) -> Second:
-    return (1 - t) * snap1.time + t * snap2.time
-
-def computeSegParameter(xa: float, xb: float, xc: float, xd: float, ya: float, yb: float, yc:float, yd: float, t: float) -> Optional[float]:
-    f = 0.0
-    x_zero = almostZero(xa + xc * t)
-    y_zero = almostZero(ya + yc * t)
-    if x_zero and y_zero:
-        f = None
-    elif x_zero:
-        f = (yd - yb * t) / (ya + yc * t)
-    elif y_zero:
-        f = (xd - xb * t) / (xa + xc * t)
-    else:
-        f1 = (xd - xb * t) / (xa + xc * t)
-        f2 = (yd - yb * t) / (ya + yc * t)
-        if betweenZeroAndOne(f1):
-            f = f1
-        else:
-            f = f2
-
-    return f
-
-def potentialCollisions(snap1: Snapshot, snap2: Snapshot) -> List[List[float]]:
-    xb0, yb0 = snap1.ball.x, snap1.ball.y
-    xb1, yb1 = snap2.ball.x, snap2.ball.y
-    
-    c0, d0 = snap1.segment.p, snap1.segment.q
-    xc0, yc0 = c0.x, c0.y
-    xd0, yd0 = d0.x, d0.y
-
-    c1, d1 = snap2.segment.p, snap2.segment.q
-    xc1, yc1 = c1.x, c1.y
-    xd1, yd1 = d1.x, d1.y
-
-    xa = xd0 - xc0
-    ya = yd0 - yc0
-    xb = xb0 - xc0 + xc1 - xb1
-    yb = yb0 - yc0 + yc1 - yb1 
-    xc = xc0 - xd0 + xd1 - xc1
-    yc = yc0 - yd0 + yd1 - yc1
-    xd = xb0 - xc0
-    yd = yb0 - yc0
-
-    i = xd * ya - yd * xa
-    j = xd * yc - xb * ya - yd * xc + yb * xa
-    k = yb * xc - xb * yc
-
-    ts = solveQuadraticEq(k, j, i)
-    fs = []
-    for t in ts:
-        f = computeSegParameter(xa, xb, xc, xd, ya, yb, yc, yd, t)
-        if f != None:
-            fs.append(f) 
-
-    return sorted(zip(ts, fs))
-
-def solveAZero(a: float, b: float, c: float) -> List[float]:
-    return [-c / b]
-
-def solveBZero(a: float, b: float, c: float) -> List[float]:
-    val = -c / a
-    val_sign = math.copysign(1.0, val)
-    if val_sign < 0:
-        return []
-    else:
-        return [math.sqrt(val)]
-
-def solveCZero(a: float, b: float, c: float) -> List[float]:
-    return sorted([0, -b / a])
-
-def solveNonZero(a: float, b: float, c: float) -> List[float]:
-    d = (b * b) - 4 * a * c
-
-    if almostZero(d):
-        return [-b / (2 * a)]
-    elif d > 0:
-        return [((-b) - math.sqrt(d)) / (2 * a), ((-b) + math.sqrt(d)) / (2 * a)]
-    else:
-        return []
-
-def solveQuadraticEq(a: float, b: float, c: float) -> List[float]:
-    res = []
-    a_zero = almostZero(a)
-    b_zero = almostZero(b)
-    c_zero = almostZero(c)
-    
-    if c_zero and (a_zero or b_zero):
-        res = [0] 
-    elif a_zero and b_zero:
-        res = []
-    elif c_zero:
-        res = solveCZero(a, b, c) 
-    elif b_zero:
-        res = solveBZero(a, b, c)
-    elif a_zero:
-        res = solveAZero(a, b, c)
-    elif almostZero(a / b) or almostZero(a / c):
-        res = solveQuadraticEq(0.0, b, c)
-    else:
-        res = solveNonZero(a, b, c)
-
-    return res
-        
 # Exercise 3
 EPS = 0.00000000001
 
@@ -223,11 +100,11 @@ def evaluateArm(arm: Arm) -> List[Pnt]:
 
     return pnts
 
-def makeGlobal(ts: list(np.array)):
+def makeGlobal(ts: np.array):
     gts = list(accumulate(ts, np.matmul, initial=identity()))
     return gts
 
-def transformations(arm: Arm) -> list(np.array):
+def transformations(arm: Arm) -> np.array:
     ts = []
     for link, joint in arm.comp:
         tlink, rjoint = transformation(link, joint)
@@ -254,64 +131,80 @@ def dance(time: Second, arm: Arm) -> Control:
            ,  -20 * math.cos (6.0 * time)
            ]
 
-# Exercise 4
-def handleCollision(snap1: Snapshot, snap2: Snapshot, time: Second) -> Tuple[Pnt, Vec]:
-    # convert to numpy array for better calculation
-    b1, b2 = PntToNparray(snap1.ball), PntToNparray(snap2.ball)
-    p1, p2 = PntToNparray(snap1.segment.p), PntToNparray(snap2.segment.p)
-    q1, q2 = PntToNparray(snap1.segment.q), PntToNparray(snap2.segment.q)
-    t1, t2 = snap1.time, snap2.time
-    t = time - t1
-    
-    # velocity of the ball
-    vb = (b2 - b1) / (t2 - t1)
-
-    # position of the collision
-    c = b1 + (vb * t)
-
-    # velocity of the collision point
-    vp = (p2 - p1) / (t2 - t1)
-    vq = (q2 - q1) / (t2 - t1)
-    p = p1 + (vp * t)
-    q = q1 + (vq * t)
-    pqNorm = np.linalg.norm(q - p)
-    pcNorm = np.linalg.norm(c - p)
-    pcWeight = pcNorm / pqNorm
-    vc = (vp * (1 - pcWeight)) + (vq * (pcWeight))
-
-    # calculate the relative velocity, reverse the result to make it point toward normal vector
-    rv = -(vb - vc)
-
-    # calculate the normal vector for reflect the relative velocity
-    pq = (q - p) / np.linalg.norm((q - p)) # normalize the vector
-
-    # reflect rv about the segement, r = v - (2 * (v ‧ N) * N), which N is the normalized normal vector
-    reflection = rv - (2 * np.dot(rv, pq) * pq)
-
-    # add the velocity of segment with the reflection vector
-    v = (reflection + vc)
-
-    return (Pnt(c[0], c[1]), Vec(v[0], v[1]))
-
-# convert to numpy array for calculation
-def PntToNparray(p: Pnt):
-    return np.array([p.x, p.y, 0])
-
 # Exercise 5
-
-
+# We use FABRIK to achieve inverse kinematics
 def inverse(arm: Arm, seg: Seg) -> List[Radian]:
-    return [0.0] * NUMLINKS
+    # evaluateArm returns: base + joints + bat end
+    jointPoses = [pntToArr(pnt) for pnt in evaluateArm(arm)]
+    linkLens = [comp[0].llen for comp in arm.comp]
+    totalLength = sum(linkLens)
+    base = np.array([0, 0])
+    p = pntToArr(seg.p)
+    q = pntToArr(seg.q)
 
-# Exercise 6
+    distFromBase = np.linalg.norm(p - base)
+    bs = p
+    be = q
+    
+    # check if the lowest point of segment is reachable
+    if totalLength < distFromBase:
+        return None
 
+    jointCount = len(jointPoses)
 
-def plan(current_time: Second, arm: Arm, time_bound: Second,
-         seg: Seg, velocity: Vec) -> Control:
-    return [0.0] * NUMLINKS
+    dist = np.linalg.norm(be - jointPoses[jointCount - 1])
 
-# Exercise 7
+    iteration = 0
+    
+    while(dist > EPS):
+        # forward reaching
+        # set the bat align with segment
+        # move prevJoint to new position by the length of
+        # the link between joints
+        # pj means previous joint, cj means current joint
+        jointPoses[jointCount - 2] = bs
+        jointPoses[jointCount - 1] = be
+        
+        # start with the index of last joint
+        for index in range(jointCount - 3, 0, -1):
+            pj = jointPoses[index]
+            cj = jointPoses[index + 1]
+            d = np.linalg.norm(pj - cj)
+            weight = linkLens[index] / d
+            # calculate the new position for pj
+            jointPoses[index] = cj + ((pj - cj) * weight)
+        
+        # backward reaching
+        # set the base joint to original position
+        # move nextJoint to new position by the length of 
+        # the link between joints
+        # nj means next joint, cj is the same as the upper loop
+        jointPoses[0] = base
+        for index in range(0, jointCount - 3):
+            cj = jointPoses[index]
+            nj = jointPoses[index + 1]
+            d = np.linalg.norm(cj - nj)
+            weight = linkLens[index] / d
+            # calculate the new position for nj
+            jointPoses[index + 1] = cj + ((nj - cj) * weight)
 
+        # get new distance between end effector and target
+        dist = np.linalg.norm(be - jointPoses[jointCount - 1])
+        iteration += 1
+        if iteration > 1000:
+            break
 
-def action(time: Second, item: Item, arm: Arm, ball: BallState) -> Control:
-    return [-10 * math.sin(2.2 * time), -10 * math.cos(2.3 * time),  10 * math.sin(2.4 * time),  10 * math.cos(2.5 * time)]
+    # calculate radians with positions
+    radians = []
+    prevRadian = np.pi / 2
+    for j in range(1, jointCount - 1):
+        vec = jointPoses[j + 1] - jointPoses[j]
+        r = np.arctan2(vec[1], vec[0])
+        r -= prevRadian
+        radians.append(r)
+        prevRadian += r
+
+    return radians
+
+def pntToArr(pnt: Pnt):
+    return np.array([pnt.x, pnt.y])
