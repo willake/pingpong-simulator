@@ -3,6 +3,7 @@ module PingPong.Grading.B5.Checker (getTestCaseRefs, checkSubmission) where
 import PingPong.Grading.B5.Types
 
 import PingPong.Model hiding (score)
+import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
 import PingPong.Submission
 import PingPong.Communication.Interface
@@ -59,12 +60,6 @@ checkSubmission sub ref = do
   testcase@(_, i, o) <- getTestCase ref
   testInverse inverter evaluator testcase
 
-
-
-catchInterfaceException :: InterfaceException -> IO TestResult
-catchInterfaceException e = return $ failure { message = show e }
-
-
 writeAngles :: [Radian] -> String
 writeAngles = show
 
@@ -75,7 +70,7 @@ writePnt :: Pnt -> String
 writePnt (Point2 x y) = "(" ++ show x ++ "," ++ show y ++ ")"
 
 testInverse :: (Arm -> Seg -> IO (Maybe [Radian])) -> (Arm -> IO [Pnt]) -> TestCase -> IO TestResult
-testInverse inverter evaluator (ref, (arm, seg), possible) = handle catchInterfaceException $ do
+testInverse inverter evaluator (ref, (arm, seg), possible) = catchExceptions $ do
   givenAnswer <- inverter arm seg
   case givenAnswer of Nothing -> do let val | possible  = 3
                                             | otherwise = 2
@@ -116,3 +111,14 @@ applyJointAngles (r : rs) (Extend l j a) = Extend l (applyJointAngle r j) (apply
 applyJointAngle :: Radian -> Joint -> Joint
 applyJointAngle r (Joint c _ v) = Joint c r v
 
+
+
+catchExceptions :: IO TestResult -> IO TestResult
+catchExceptions = handle catchErrorCall
+                . handle catchInterfaceException
+
+catchInterfaceException :: InterfaceException -> IO TestResult
+catchInterfaceException e = return $ failure { message = show e }
+
+catchErrorCall :: ErrorCall -> IO TestResult
+catchErrorCall e = return $ failure { message = show e }

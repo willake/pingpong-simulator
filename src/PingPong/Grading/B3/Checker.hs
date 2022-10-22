@@ -3,6 +3,7 @@ module PingPong.Grading.B3.Checker (getTestCaseRefs, checkSubmission) where
 import PingPong.Grading.B3.Types
 
 import PingPong.Model hiding (score)
+import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
 import PingPong.Submission
 import PingPong.Communication.Interface
@@ -59,16 +60,13 @@ checkSubmission sub ref = do
 
 
 
-catchInterfaceException :: InterfaceException -> IO TestResult
-catchInterfaceException e = return $ failure { message = show e }
-
 
 writeArm :: Arm -> String
 writeArm (Extend l j a) = "link " ++ show (llen l) ++ " joint " ++ show (jang j) ++ " " ++ show (jvel j) ++ " " ++ writeArm a 
 writeArm (End    l    ) = "bat"
 
 testControl :: (Second -> Control -> Arm -> IO Arm) -> TestCase -> IO TestResult
-testControl controller (ref, Left (s, c, a), Left correctAnswer) = handle catchInterfaceException $ do
+testControl controller (ref, Left (s, c, a), Left correctAnswer) = catchExceptions $ do
   givenAnswer <- controller s c a
   let cJoints = armJoints correctAnswer
       gJoints = armJoints givenAnswer
@@ -91,7 +89,7 @@ writePnts [Point2 x y]        = show x ++ " " ++ show y
 writePnts (Point2 x y : pnts) = show x ++ " " ++ show y ++ " / " ++ writePnts pnts
 
 testEval :: (Arm -> IO [Pnt]) -> TestCase -> IO TestResult
-testEval evaluator (ref, Right arm, Right correctAnswer) = handle catchInterfaceException $ do
+testEval evaluator (ref, Right arm, Right correctAnswer) = catchExceptions $ do
   givenAnswer <- evaluator arm
   let correct = givenAnswer ~= correctAnswer
       sco = length $ filter id $ drop 2 $ zipWith (~=) givenAnswer correctAnswer
@@ -103,3 +101,16 @@ testEval evaluator (ref, Right arm, Right correctAnswer) = handle catchInterface
                           , message = mes
                           }                          
   return result
+
+
+
+
+catchExceptions :: IO TestResult -> IO TestResult
+catchExceptions = handle catchErrorCall
+                . handle catchInterfaceException
+
+catchInterfaceException :: InterfaceException -> IO TestResult
+catchInterfaceException e = return $ failure { message = show e }
+
+catchErrorCall :: ErrorCall -> IO TestResult
+catchErrorCall e = return $ failure { message = show e }

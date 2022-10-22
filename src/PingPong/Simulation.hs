@@ -57,6 +57,7 @@ act :: Bool -> State -> IO Control
 act b st = case phase st of BeforeGame _  -> stretch (getPlayer b st) (time st) $ arm $ getPlayer b st
                             BeforeRally _ -> straightenUp b st
                             DuringRally   -> actDuringRally b st
+                            AfterRally _  -> actDuringRally b st
                             AfterGame _   -> dance (getPlayer b st) (time st) $ arm $ getPlayer b st
                             _             -> return $ replicate 5 0
 
@@ -125,8 +126,8 @@ initBeforeGame :: State -> IO State
 initBeforeGame st = return $ st { phase = BeforeGame beforeGameTime
                                 , score = (0, 0)
                                 , ball  = BallState (Point2 (-1) 0.6) (Vector2 0.4 1)
-                                , p1    = (p1 st) {initArm = arm (p1 st)}
-                                , p2    = (p2 st) {initArm = arm (p2 st)}
+--                                , p1    = (p1 st) {initArm = arm (p1 st)}
+--                                , p2    = (p2 st) {initArm = arm (p2 st)}
                                 }
 
 initBeforeRally :: State -> IO State

@@ -5,6 +5,7 @@ import PingPong.Draw.Rasterific
 import PingPong.Simulation
 import PingPong.Simulation.Collision
 import PingPong.Submission hiding (prepare, terminate, name)
+import PingPong.Submission.ModelNativeSubmission
 
 import Codec.Picture( PixelRGBA8( .. ), writePng )
 import Graphics.Rasterific hiding (Drawing)
@@ -32,6 +33,9 @@ frameCount = 500
 frameDuration :: Float
 frameDuration = 1 / frameRate
 
+-- | The main play function.
+play :: Player -> Player -> IO ()
+play = playWithSubmission $ nativeToIOSubmission PingPong.Submission.ModelNativeSubmission.submission
 
 
 -- | Play with certain functionality replaced by that from the given submission.

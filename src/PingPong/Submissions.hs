@@ -10,6 +10,7 @@ import System.FilePath
 
 -- Native submissions must be explicitly listed, since they must be known at compile time.
 import qualified PingPong.Submission.ExampleNativeSubmission as ExampleNativeSubmission
+import qualified PingPong.Submission.ModelNativeSubmission as ModelNativeSubmission
 
 submissions :: IO [IOSubmission]
 submissions = do
@@ -26,6 +27,7 @@ submissions = do
 nativeSubmissions :: [Submission]
 nativeSubmissions = 
   [ ExampleNativeSubmission.submission
+  , ModelNativeSubmission.submission
   ]
 
 

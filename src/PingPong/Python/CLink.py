@@ -141,6 +141,9 @@ def handle_dance(message, module):
     control = module.dance(time, thearm)
     logging.info(f"Dance control {control}")
 
+    if isinstance(control, Control):
+        control = control.accelerations
+
     return json.dumps(
         {
             "type": "dance",
@@ -163,6 +166,9 @@ def handle_plan(message, module):
     control = module.plan(ctime, thearm, btime, seg, velocity)
     logging.info(f"Plan control {control}")
 
+    if isinstance(control, Control):
+        control = control.accelerations
+
     return json.dumps(
         {
             "type": "plan",
@@ -173,6 +179,9 @@ def handle_action(message, module):
     time, item, thearm, state = parse_action(message)
     control = module.action(time, item, thearm, state)
     logging.info(f"New control vector {control}")
+
+    if isinstance(control, Control):
+        control = control.accelerations
 
     return json.dumps(
         {

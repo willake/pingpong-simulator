@@ -37,16 +37,20 @@ noPlayer = defaultPlayer
 
 -- | Default stretching behaviour.
 defaultStretch :: Float -> Arm -> IO Control
-defaultStretch t _ = return $ propcap $ map (* cos t) [-2, 6, -6, 6, -6]
+defaultStretch t a = do
+  let n = length $ armJoints a
+  return $ take n $ propcap $ map (* cos (1.5 * t)) [-3, 8, -8, 8, -8]
 
 -- | Default dancing behaviour.
 defaultDance :: Float -> Arm -> IO Control
-defaultDance t _ = return [ 5 * sin (2.5 * (t + 0.0))
-                          , 5 * sin (2.5 * (t + 0.3))
-                          , 5 * sin (2.5 * (t + 0.6))
-                          , 5 * sin (2.5 * (t + 0.9))
-                          , 5 * sin (2.5 * (t + 1.2))
-                          ]
+defaultDance t a = do
+  let n = length $ armJoints a
+  return $ take n [ 5 * sin (2.5 * (t + 0.0))
+                  , 5 * sin (2.5 * (t + 0.3))
+                  , 5 * sin (2.5 * (t + 0.6))
+                  , 5 * sin (2.5 * (t + 0.9))
+                  , 5 * sin (2.5 * (t + 1.2))
+                  ]
 
 propcap :: [Float] -> [Float]
 propcap xs | m < 2 = xs

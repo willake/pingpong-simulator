@@ -1,6 +1,7 @@
 module PingPong.Grading where
 
 import PingPong.Model hiding (score, prepare, terminate)
+import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
 import PingPong.Grading.Reports
 import PingPong.Grading.Assignments
@@ -18,7 +19,16 @@ import Control.Exception
 main :: IO ()
 main = do
 
+--  generateTestCases "B6"
+
+  gradeAssignment "B6"
+
+{-
+  gradeAssignment "B1"
   gradeAssignment "B2"
+  gradeAssignment "B3"
+  gradeAssignment "B4"
+-}
 
 -- TODO: move to module Grading.Main
 

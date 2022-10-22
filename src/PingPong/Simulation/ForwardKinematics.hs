@@ -17,6 +17,7 @@ import Data.Colour
 
 
 import PingPong.Model
+import PingPong.Model.AlmostEqual
 
 
 -- applying control and advancing time
@@ -26,9 +27,8 @@ type Controller = Second -> Control -> Arm -> IO Arm
 -- | Applies control vector to the joint velocities, 
 --   and in turn applies joint velocities to joint angles.
 controlArm :: Second -> Control -> Arm -> Arm
---controlArm td c a = advanceArmRaw td $ applyControl td c a
-controlArm = error "controlArm not implemented" 
-
+controlArm td c a = advanceArmRaw td $ applyControl td c a
+--controlArm = error "controlArm not implemented" 
 
 -- | Applies control vector to the joint velocities.
 applyControl :: Second -> Control -> Arm -> Arm
@@ -44,7 +44,6 @@ controlJoint td f (Joint c a v) = Joint c a (capSpeed (v + (capAcceleration f) *
 controlJointRaw :: Second -> RadianPerSquareSecond -> Joint -> Joint
 controlJointRaw td f (Joint c a v) = Joint c a (v + f * td)
 
-
 -- | Advances the arm state by a given amount of time, not taking into account any phyisical obstacles.
 advanceArmRaw :: Second -> Arm -> Arm 
 advanceArmRaw td (End l)        = End l
@@ -56,6 +55,11 @@ advanceJointRaw td (Joint c a v) = Joint c (a + v * td) v
 
 
 
+
+
+
+
+
 -- location of arm in space
 
 
@@ -63,10 +67,45 @@ advanceJointRaw td (Joint c a v) = Joint c (a + v * td) v
 
 type Evaluator = Arm -> IO [Point 2 Float]
 
+
+-- this part should go?
+
+-- | Give the vertices of the arm in a list, including the base and the tip.
 -- | Give the vertices of the arm in a list, including the base and the tip.
 evaluateArm :: Arm -> [Point 2 Float]
---evaluateArm = nub . evaluateArmElements
-evaluateArm = error "evaluateArm not implemented" 
+evaluateArm arm = 
+  let uniquePoints = nub $ evaluateArmElements arm
+      points = case validateArmPoints arm uniquePoints of Just m  -> error $ "evaluateArm: " ++ m
+                                                          Nothing -> uniquePoints
+  in points             
+--evaluateArm = error "evaluateArm not implemented" 
+
+validateArmPoints :: Arm -> [Pnt] -> Maybe String
+validateArmPoints arm ps = 
+  let links = map llen $ armLinks arm
+      dists = map norm $ zipWith (.-.) (tail ps) (init ps)
+  in if links ~= dists then Nothing
+                       else Just $ show links ++ " is not the same as " ++ show dists
+
+-- | Give the vertices of all arm elements. This will include duplicate vertices,
+--   since the joint transformations are rotations and do not change the location.
+evaluateArmElements :: Arm -> [Point 2 Float]
+evaluateArmElements arm = map (origin .+^) 
+                        $ map (flip transformBy $ Vector2 0 0) 
+                        $ globalize $ transformations arm
+
+transformations :: Arm -> [Transformation 2 Float]
+transformations = map transformation . armElements
+
+transformation :: Element -> Transformation 2 Float
+transformation (Left  (Link  _ d  )) = translation $ Vector2 0 d
+transformation (Right (Joint _ a _)) = rotation a
+
+-- | Turns a sequence of local transformations into independent global transformations.
+globalize :: [Transformation 2 Float] -> [Transformation 2 Float]
+globalize ts = scanl (|.|) identity ts
+
+-- up to here
 
 
 
@@ -87,6 +126,8 @@ armSegments ev p f = do
       nps = map (transformBy (scl |.| trl)) rps
       fps = map (:+ ()) nps
   return $ zipWith (OpenLineSegment) (init fps) (tail fps)
+
+
 
 
 -- Given a set of angular speeds, compute the resulting speeds of all joints.

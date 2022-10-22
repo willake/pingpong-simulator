@@ -85,6 +85,15 @@ def parse_handle_collision(data):
 
     return snap1, snap2, time
 
+def parse_plan(data):
+    time = parse_time(data["current_time"])
+    thearm = Arm.from_json(data["current_arm"])
+    goaltime = parse_time(data["goal_time"])
+    goalseg = Seg.from_json(data["goal_segment"])
+    goalvel = Vec.from_json(data["goal_velocity"])
+
+    return time, thearm, goaltime, goalseg, goalvel
+
 def parse_action(data):
     time = parse_time(data["time"])
     item = Item.from_json(data["lasthit"])

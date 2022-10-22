@@ -1,9 +1,5 @@
 module PingPong.Submission.ExampleNativeSubmission (submission) where
 
-import Control.Lens
-import Data.Geometry
-import Data.Ext
-
 import PingPong.Model hiding (name, arm, dance, plan, action)
 import PingPong.Player
 import qualified PingPong.Submission as Submission
@@ -12,11 +8,15 @@ import PingPong.Simulation.Collision hiding (modelHandler, modelDetector)
 
 import Control.Lens
 
-import Data.Geometry
+import Data.Geometry hiding (replicate)
+import Data.Geometry.Matrix
 import Data.Ext
+import Data.Fixed
 import Data.List hiding (intersect)
 import Data.Colour
 import Data.Colour.Names
+
+
 -- Collect all exercises in a single record.
 submission = Submission.Submission
   { Submission.name            = name
@@ -80,14 +80,15 @@ inverse _ _ = Nothing
 -- FOR EXERCISE B6 --
 
 plan :: Second -> Arm -> Second -> Seg -> Vec -> Control
-plan _ _ _ _ _ = []
+plan _ _ _ _ _ = replicate (length $ armJoints arm) 0
 
 -- FOR EXERCISE B7 --
 
 action :: Second -> Item -> Arm -> BallState -> Control
-action t _ _ _ = [ -10 * sin (2.2 * t)
-                 , -10 * cos (2.3 * t)
-                 ,  10 * sin (2.4 * t)
-                 ,  10 * cos (2.5 * t)
-                 ]
+action time item arm ball = plan time arm goalTime goalSeg goalVec
+  where
+    goalTime = 8.7
+    goalSeg  = OpenLineSegment (Point2 (-0.3) 0.7 :+ ()) (Point2 (-0.3) 0.8 :+ ())
+    goalVec  = Vector2 (-1) 0
+
 

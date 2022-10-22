@@ -59,6 +59,9 @@ class Vec:
     def from_json(data):
         return Vec(data[0], data[1])
 
+    def norm(self) -> float:
+        return math.sqrt(self.a ** 2 + self.b ** 2)
+
     def __mul__(self, s):
         if isinstance(s, Vec):
             return self.a * s.a + self.b * s.b

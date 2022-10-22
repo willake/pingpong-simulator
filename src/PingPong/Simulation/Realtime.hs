@@ -5,6 +5,7 @@ import PingPong.Draw.Gloss
 import PingPong.Simulation
 import PingPong.Simulation.Collision
 import PingPong.Submission hiding (prepare, terminate)
+import PingPong.Submission.ModelNativeSubmission
 
 import System.Exit
 import Control.Monad
@@ -27,6 +28,9 @@ windowDisplay :: Display
 windowDisplay = InWindow "Window" (1600, 800) (100, 100)
 
 
+-- | The main play function.
+play :: Player -> Player -> IO ()
+play = playWithSubmission $ nativeToIOSubmission PingPong.Submission.ModelNativeSubmission.submission
 
 -- | Play with certain functionality replaced by that from the given submission.
 --   In particular, collision checking / handling and forward kinematics.

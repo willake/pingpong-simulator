@@ -1,5 +1,5 @@
 name:           pingpong-simulator
-version:        0.3.1.3
+version:        0.3.1.4
 description:    Please see the README on GitHub at <https://git.science.uu.nl/moma/pingpong#readme>
 homepage:       https://git.science.uu.nl/moma/pingpong#readme
 bug-reports:    https://git.science.uu.nl/moma/pingpong/issues
@@ -24,6 +24,8 @@ library
     PingPong.Draw.Rasterific
     PingPong.Model
     PingPong.Model.Parameters
+    PingPong.Model.Random
+    PingPong.Model.AlmostEqual 
     PingPong.Player
     PingPong.Simulation  
     PingPong.Simulation.Collision  
@@ -36,6 +38,7 @@ library
     PingPong.Submissions
     PingPong.Submission
     PingPong.Submission.ExampleNativeSubmission
+    PingPong.Submission.ModelNativeSubmission
   other-modules:
     PingPong.Grading
     PingPong.Grading.Types
@@ -61,7 +64,7 @@ library
     , test
   build-depends:
       base >=4.7 && <5
-    , ghc
+    , ghc      
     , hgeometry >= 0.14 
     , hgeometry-combinatorial >= 0.12
     , JuicyPixels
@@ -127,13 +130,10 @@ executable pingpong-simulator-exe
     src/PingPong/C/player.c
   include-dirs:
       src/PingPong/C/
-    , /Library/Frameworks/Python.framework/Versions/3.10/include/python3.10/
-  extra-lib-dirs:
-    /Library/Frameworks/Python.framework/Versions/3.10/lib
-  extra-framework-dirs:
-    /Library/Frameworks/Python.framework/Versions/3.10/lib
+    , /usr/include/python3.YOURVERSION/
   extra-libraries:
-    Python3.10
+    python3.YOURVERSION
+
 
 test-suite pingpong-simulator-test
   type: exitcode-stdio-1.0

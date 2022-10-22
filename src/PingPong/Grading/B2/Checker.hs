@@ -3,6 +3,7 @@ module PingPong.Grading.B2.Checker (getTestCaseRefs, checkSubmission) where
 import PingPong.Grading.B2.Types
 
 import PingPong.Model hiding (score)
+import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
 import PingPong.Submission
 import PingPong.Communication.Interface
@@ -49,8 +50,9 @@ checkSubmission sub ref = do
   testCollision detector testcase
 
 testCollision :: ((Second, Pnt, Seg) -> (Second, Pnt, Seg) -> IO (Maybe Second)) -> TestCase -> IO TestResult
-testCollision detector (ref, (state1, state2), correctAnswer) = handle catchInterfaceException $ do
+testCollision detector (ref, (state1, state2), correctAnswer) = catchExceptions $ do
   givenAnswer <- detector state1 state2
+  putStrLn $ show givenAnswer
   let correct = correctAnswer ~= givenAnswer
       sco | correct   = value ref
           | otherwise = 0
@@ -63,8 +65,15 @@ testCollision detector (ref, (state1, state2), correctAnswer) = handle catchInte
                           }
   return result
 
+catchExceptions :: IO TestResult -> IO TestResult
+catchExceptions = handle catchErrorCall
+                . handle catchInterfaceException
+
 catchInterfaceException :: InterfaceException -> IO TestResult
 catchInterfaceException e = return $ failure { message = show e }
+
+catchErrorCall :: ErrorCall -> IO TestResult
+catchErrorCall e = return $ failure { message = show e }
 
 writeCollisionOutput :: TestOutput -> String
 writeCollisionOutput Nothing = "no collision"

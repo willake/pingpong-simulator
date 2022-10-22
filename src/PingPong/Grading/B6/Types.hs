@@ -12,6 +12,5 @@ assignment = "B6"
 
 -- TEST CASES
 
-type TestInput  = ()
-type TestOutput = ()
-type TestCase   = (TestCaseRef, TestInput, TestOutput)
+type TestInput  = (Second, Arm, Second, Seg, Vec)
+type TestCase   = (TestCaseRef, TestInput)

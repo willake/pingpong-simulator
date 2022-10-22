@@ -73,11 +73,34 @@ makePlayer sub = do
   (n, a) <- prepare sub
   return Player 
     { Player.name      = n
-    , Player.arm       = a
+    , Player.arm       = setJointAngles (replicate (length $ armJoints a) 0) a
     , Player.initArm   = a
     , Player.foot      = 1.5
     , Player.prepare   = return () -- should not be needed anymore...?
-    , Player.dance     = danceIO sub
-    , Player.stretch   = defaultStretch
-    , Player.action    = \s (_, i) b a -> actionIO sub s i a b
+    , Player.dance     = \s a          -> validateControl a $ danceIO sub s a
+    , Player.stretch   = \s a          -> validateControl a $ defaultStretch s a
+    , Player.action    = \s (_, i) b a -> validateControl a $ actionIO sub s i a b
     }
+
+setJointAngles :: [Radian] -> Arm -> Arm
+setJointAngles (r : rs) (Extend l j a) = Extend l (j {jang = r}) $ setJointAngles rs a
+setJointAngles []       (Extend l j a) = error "setJointAngles: Not enough angles."
+setJointAngles []       (End l)        = End l
+setJointAngles (r : rs) (End l)        = error "setJointAngles: Too many angles."
+
+
+-- | Check whether a given control vector is valid for an arm; if not, 
+--   replace it by zero.
+--   This will make sure that errors will not crash the simulator.
+validateControl :: Arm -> IO Control -> IO Control
+validateControl a ioc = do 
+  let n = length (armJoints a)
+  c <- ioc
+  let res | length c /= n    = do putStrLn $ "validateControl: invalid control vector " ++ show c
+                                  return $ replicate n 0
+          | any isNaN c      = do putStrLn $ "validateControl: invalid control vector " ++ show c
+                                  return $ replicate n 0
+          | any isInfinite c = do putStrLn $ "validateControl: invalid control vector " ++ show c
+                                  return $ replicate n 0
+          | otherwise        = return c
+  res

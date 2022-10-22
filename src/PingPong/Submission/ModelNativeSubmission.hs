@@ -1,107 +1,61 @@
-module PingPong.Simulation.Collision
-  ( CollisionChecker
-  , defaultCollisionChecker
-  , verify
-  , Snapshot
-  , buildCollisionCheckerIO
-  , CollisionDetectorIO
-  , CollisionHandlerIO
-  , modelDetector
-  , modelHandler
-  ) where
+module PingPong.Submission.ModelNativeSubmission (submission) where
 
-import PingPong.Model
+import PingPong.Model hiding (name, arm, dance, plan, action)
+import PingPong.Model.AlmostEqual
+import PingPong.Player
+import qualified PingPong.Submission as Submission
 
-import Data.Geometry hiding (init, head, zero, replicate)
-import Data.List hiding (intersect)
-import Data.Foldable
-import Data.Ext
+import PingPong.Simulation.Collision hiding (modelHandler, modelDetector)
 
 import Control.Lens
 
-import Data.Geometry.Transformation
-
--- * Implementation of collision checking.
-
-
--- | A collision checker takes as input two time stamps, with for each time stamp
---   the location of a point and a segment.
-type Snapshot = (Second, Pnt, Seg)
-
-
--- | A collision checker takes as input two snapshots.
---   Assuming linear motion between the two time stamps, the checker should test
---   if a collision between the point and the segment takes place.
---   If so, it should report the time of the collision, as well as location and
---   velocity of the point as a result of the collision.
-type CollisionChecker = Snapshot
-                     -> Snapshot
-                     -> IO (Maybe (Second, Pnt, Vec))
-
--- | A Collision detector only detects if there is a collision, and if so, when.
-type CollisionDetector   = Snapshot -> Snapshot ->     Maybe Second
-type CollisionDetectorIO = Snapshot -> Snapshot -> IO (Maybe Second)
-
--- | A Collision handler handles a collision, provided the time of collision.
-type CollisionHandler   = Snapshot -> Snapshot -> Second ->    (Pnt, Vec)
-type CollisionHandlerIO = Snapshot -> Snapshot -> Second -> IO (Pnt, Vec)
-
-buildCollisionChecker :: CollisionDetector -> CollisionHandler -> CollisionChecker
-buildCollisionChecker detect handle snap1 snap2 =
-  case detect snap1 snap2 of 
-    Nothing -> return Nothing
-    Just t  -> let (p, v) = handle snap1 snap2 t
-               in return $ Just (t, p, v)
-
-buildCollisionCheckerIO :: CollisionDetectorIO -> CollisionHandlerIO -> CollisionChecker
-buildCollisionCheckerIO detect handle snap1 snap2 = do
-  det <- detect snap1 snap2
-  case det of
-    Nothing -> return Nothing
-    Just t  -> do (p, v) <- handle snap1 snap2 t
-                  return $ Just (t, p, v)
-
--- The collision checker that will be used when running the simulator through the play function.
-defaultCollisionChecker :: CollisionChecker
-defaultCollisionChecker = modelChecker
-
--- Make sure a collision checker returns something with a sensible time stamp.
-verify :: CollisionChecker -> CollisionChecker
-verify checker st1 st2 = do
-  result <- checker st1 st2
-  return $ verifyResult st1 st2 result
-
-verifyResult :: Snapshot
-             -> Snapshot
-             -> Maybe (Second, Pnt, Vec)
-             -> Maybe (Second, Pnt, Vec)
-verifyResult _ _ Nothing = Nothing
-verifyResult (t1, p1, s1) (t2, p2, s2) (Just (t, p, v)) | t <= t1 = Nothing
-                                                        | t >= t2 = Nothing
-                                                        | otherwise = Just (t, p, v)
-
--- A simple collision checker which ignores the segment, and only checks for collision with the floor.
-floorChecker :: CollisionChecker
-floorChecker (t1, Point2 x1 y1, _) (t2, Point2 x2 y2, _)
-  | y2 >= 0   = return Nothing
-  | y1 == y2  = error "Ball was already under the floor!?"
-  | otherwise = let tc = t1 + (t2 - t1) * y1 / (y1 - y2)
-                    xc = x1 + (x2 - x1) * y1 / (y1 - y2)
-                    yc = 0
-                    dx = (x2 - x1) / (t2 - t1)
-                    dy = (y1 - y2) / (t2 - t1)
-                in return $ Just (tc, Point2 xc yc, Vector2 dx dy)
-  
--- The model solution.
-modelChecker :: CollisionChecker
-modelChecker = buildCollisionChecker modelDetector modelHandler
+import Data.Geometry hiding (head, init, replicate)
+import Data.Geometry.Matrix
+import Data.Ext
+import Data.List hiding (head, init, intersect)
+import Data.Colour
+import Data.Colour.Names
+import Data.Fixed
 
 
+import Debug.Trace
+
+-- Collect all exercises in a single record.
+submission = Submission.Submission
+  { Submission.name            = name
+  , Submission.arm             = arm
+  , Submission.detectCollision = detectCollision
+  , Submission.handleCollision = handleCollision
+  , Submission.controlArm      = controlArm
+  , Submission.evaluateArm     = evaluateArm
+  , Submission.dance           = dance
+  , Submission.inverse         = inverse
+  , Submission.plan            = plan
+  , Submission.action          = action
+  }
 
 
+---------------------
+-- FOR EXERCISE B1 --
+---------------------
+
+name :: String
+name = "Cor du Buy"
+
+arm  :: Arm
+arm = link black 0.3 -* joint black (-0.7)
+   *- link black 0.3 -* joint black ( 1.2)
+   *- link black 0.3 -* joint black ( 1.0)
+   *- link black 0.3 -* joint black (-0.5)
+   *- bat  red
+
+---------------------
+-- FOR EXERCISE B2 --
+---------------------
 
 
--- DETECTION
+detectCollision :: Snapshot -> Snapshot -> Maybe Second
+detectCollision = modelDetector
 
 -- | A potential collision is given by two real numbers: a time fraction,
 --   and a fraction of the segment.
@@ -174,28 +128,92 @@ solveQuadraticEquation a b c =
              | d >  0 = [(-b - sqrt d) / (2 * a), (-b + sqrt d) / (2 * a)]
              | otherwise = []
   in result
-  -- trace ("soving equation " ++ show a ++ "x^2 + " ++ show b ++ "x + " ++ show c ++ " = 0") $ result  
-
 
 -- | Test whether a floating point number is zero, taking rounding errors into account.
 almostZero :: (Floating r, Ord r) => r -> Bool
 almostZero x = abs x < epsilon
 
--- | Treshold for rounding errors in zero tests
---   TODO: Should be different depending on the type.
+-- | Treshold for rounding errors in zero tests.
 epsilon :: Floating r => r
 epsilon = 0.0001
 
 
+---------------------
+-- FOR EXERCISE B3 --
+---------------------
+
+controlArm :: Second -> Control -> Arm -> Arm
+controlArm td c a = advanceArm td $ applyControl td c a
+
+applyControl :: Second -> Control -> Arm -> Arm
+applyControl td [] (End l) = End l
+applyControl td (f : fs) (Extend l j a) = Extend l (controlJoint td f j) (applyControl td fs a)
+applyControl td _ a = a -- wrong length of control vector
+
+-- | Apply acceleration to a joint, taking into account maximum speed and acceleration.
+controlJoint :: Second -> RadianPerSquareSecond -> Joint -> Joint
+controlJoint td f (Joint c a v) = Joint c a (capSpeed (v + (capAcceleration f) * td))
+
+advanceArm :: Second -> Arm -> Arm 
+advanceArm td (End l)        = End l
+advanceArm td (Extend l j a) = Extend l (advanceJoint td j) (advanceArm td a)
+
+advanceJoint :: Second -> Joint -> Joint
+advanceJoint td (Joint c a v) = Joint c (a + v * td) v
 
 
 
 
 
+-- | Give the vertices of the arm in a list, including the base and the tip.
+evaluateArm :: Arm -> [Point 2 Float]
+evaluateArm arm = 
+  let uniquePoints = nub $ evaluateArmElements arm
+      points = case validateArmPoints arm uniquePoints of Just m  -> error $ "evaluateArm: " ++ m
+                                                          Nothing -> uniquePoints
+  in points             
+
+validateArmPoints :: Arm -> [Pnt] -> Maybe String
+validateArmPoints arm ps = 
+  let links = map llen $ armLinks arm
+      dists = map norm $ zipWith (.-.) (tail ps) (init ps)
+  in if links ~= dists then Nothing
+                       else Just $ show links ++ " is not the same as " ++ show dists
 
 
 
--- HANDLING
+-- | Give the vertices of all arm elements. This will include duplicate vertices,
+--   since the joint transformations are rotations and do not change the location.
+evaluateArmElements :: Arm -> [Point 2 Float]
+evaluateArmElements arm = map (origin .+^) 
+                        $ map (flip transformBy $ Vector2 0 0) 
+                        $ globalize $ transformations arm
+
+transformations :: Arm -> [Transformation 2 Float]
+transformations = map transformation . armElements
+
+transformation :: Element -> Transformation 2 Float
+transformation (Left  (Link  _ d  )) = translation $ Vector2 0 d
+transformation (Right (Joint _ a _)) = rotation a
+
+-- | Turns a sequence of local transformations into independent global transformations.
+globalize :: [Transformation 2 Float] -> [Transformation 2 Float]
+globalize ts = scanl (|.|) identity ts
+
+dance :: Second -> Arm -> Control
+dance t _ = [ -20 * sin (3 * t)
+            ,  20 * cos (3 * t)
+            , -20 * sin (3 * t)
+            ,  20 * cos (3 * t)
+            ]
+
+---------------------
+-- FOR EXERCISE B4 --
+---------------------
+
+handleCollision :: Snapshot -> Snapshot -> Second -> (Pnt, Vec)
+handleCollision = modelHandler
+
 
 modelHandler :: Snapshot -> Snapshot -> Second -> (Pnt, Vec)
 modelHandler snap1 snap2 t = 
@@ -227,15 +245,13 @@ collisionPoint (t0, b0, seg0) (t1, b1, seg1) t =
       xd = xb0 - xc0
       yd = yb0 - yc0
       u = (t - t0) / (t1 - t0)
+      p = origin .+^ (1-u) *^ (b0 .-. origin) 
+                 .+^ u     *^ (b1 .-. origin)
       s | almostZero $ xa + xc * u = (yd - yb * u) / (ya + yc * u)
         | almostZero $ ya + yc * u = (xd - xb * u) / (xa + xc * u)
         | otherwise = let s1 = (xd - xb * u) / (xa + xc * u)
                           s2 = (yd - yb * u) / (ya + yc * u)
                       in if 0 <= s1 && s1 <= 1 then s1 else s2 -- checkAlmostEqual s1 s2 
-      p = origin .+^ (1-u) * (1-s) *^ (c0 .-. origin) 
-                 .+^ (1-u) * s     *^ (d0 .-. origin) 
-                 .+^ u     * (1-s) *^ (c1 .-. origin)
-                 .+^ u     * s     *^ (d1 .-. origin)
   in (p, s)
 
 checkAlmostEqual :: (Ord r, Floating r, Show r) => r -> r -> r
@@ -275,3 +291,42 @@ reflectVector a b = reflection (angle (Vector2 1 0) b) `transformBy` a
 -- | Find the angle between two vectors, in counter-clockwise order, from the first to the second.
 angle :: Vector 2 Float -> Vector 2 Float -> Float
 angle (Vector2 x1 y1) (Vector2 x2 y2) = atan2 (x1 * y2 - y1 * x2) (x1 * x2 + y1 * y2)
+
+-- A more general version of angle which is not correct?
+angle' :: (Arity d, Floating r) => Vector d r -> Vector d r -> r
+angle' u v = dot u v / norm u / norm v
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- FOR EXERCISE B5 --
+
+inverse :: Arm -> Seg -> Maybe [Radian]
+inverse _ _ = Nothing
+
+-- FOR EXERCISE B6 --
+
+plan :: Second -> Arm -> Second -> Seg -> Vec -> Control
+plan _ _ _ _ _ = replicate (length $ armJoints arm) 0
+
+-- FOR EXERCISE B7 --
+
+action :: Second -> Item -> Arm -> BallState -> Control
+action time item arm ball = plan time arm goalTime goalSeg goalVec
+  where
+    goalTime = 8.7
+    goalSeg  = OpenLineSegment (Point2 (-0.3) 0.7 :+ ()) (Point2 (-0.3) 0.8 :+ ())
+    goalVec  = Vector2 (-1) 0
+

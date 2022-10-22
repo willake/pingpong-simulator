@@ -32,7 +32,8 @@ import Foreign.C.String
 import Data.Colour
 import Data.Colour.Names
 
-
+-- If you are using the haskell-only version, comment the following lines and instead use:
+-- callpython = undefined
 foreign import ccall "PingPong/C/player.h callpython"
   callpython :: CString -> IO CString
 
