@@ -136,27 +136,36 @@ def dance(time: Second, arm: Arm) -> Control:
 def inverse(arm: Arm, seg: Seg) -> List[Radian]:
     # evaluateArm returns: base + joints + bat end
     jointPoses = [pntToArr(pnt) for pnt in evaluateArm(arm)]
+    jointCount = len(jointPoses)
+    # link lengthes + bat length
     linkLens = [comp[0].llen for comp in arm.comp]
+    linkLens.append(arm.bat.llen)
     totalLength = sum(linkLens)
-    base = np.array([0, 0])
+    # position of end effector and base
+    base = np.array(jointPoses[0])
     p = pntToArr(seg.p)
     q = pntToArr(seg.q)
 
-    distFromBase = np.linalg.norm(p - base)
-    bs = p
-    be = q
-    
-    # check if the lowest point of segment is reachable
-    if totalLength < distFromBase:
+    # start point means the start position of controllable joint
+    # since the first joint is fixed(always be [0, 0.1])
+    # we should calculate the reachable point from that
+    # reachable length should remove the fixed joint since it is not controllable,
+    # so it can't be taken into account
+    # we remove bat length because we calculate the distance from 
+    # the position of end effector
+    startPoint = base + np.array([0, 0.1])
+    reachalbeLength = totalLength - arm.bat.llen - 0.1
+    if reachalbeLength < np.linalg.norm(p - startPoint):
         return None
 
-    jointCount = len(jointPoses)
+    bs = p
+    be = q
 
-    dist = np.linalg.norm(be - jointPoses[jointCount - 1])
+    targetDist = np.linalg.norm(jointPoses[jointCount - 2] - bs)
 
     iteration = 0
     
-    while(dist > EPS):
+    while(targetDist > EPS):
         # forward reaching
         # set the bat align with segment
         # move prevJoint to new position by the length of
@@ -166,30 +175,33 @@ def inverse(arm: Arm, seg: Seg) -> List[Radian]:
         jointPoses[jointCount - 1] = be
         
         # start with the index of last joint
-        for index in range(jointCount - 3, 0, -1):
+        for index in range(jointCount - 3, -1, -1):
             pj = jointPoses[index]
             cj = jointPoses[index + 1]
             d = np.linalg.norm(pj - cj)
             weight = linkLens[index] / d
-            # calculate the new position for pj
             jointPoses[index] = cj + ((pj - cj) * weight)
         
         # backward reaching
-        # set the base joint to original position
+        # set the base joint align with its original position
         # move nextJoint to new position by the length of 
         # the link between joints
-        # nj means next joint, cj is the same as the upper loop
+        # nj means next joint, cj means current joint
         jointPoses[0] = base
-        for index in range(0, jointCount - 3):
+        jointPoses[1] = np.array([0, 0.1])
+
+        for index in range(1, jointCount - 2):
             cj = jointPoses[index]
             nj = jointPoses[index + 1]
-            d = np.linalg.norm(cj - nj)
+            d = np.linalg.norm(nj - cj)            
             weight = linkLens[index] / d
             # calculate the new position for nj
             jointPoses[index + 1] = cj + ((nj - cj) * weight)
 
-        # get new distance between end effector and target
-        dist = np.linalg.norm(be - jointPoses[jointCount - 1])
+        # update distEnd
+        targetDist = np.linalg.norm(jointPoses[jointCount - 2] - bs)
+        
+        # counting iteration to prevent from an endless loop
         iteration += 1
         if iteration > 1000:
             break
