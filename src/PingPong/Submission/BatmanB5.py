@@ -198,10 +198,10 @@ def inverse(arm: Arm, seg: Seg) -> List[Radian]:
             # calculate the new position for nj
             jointPoses[index + 1] = cj + ((nj - cj) * weight)
 
-        # Update distEnd
+        # update distEnd
         targetDist = np.linalg.norm(jointPoses[jointCount - 2] - bs)
         
-        # counting iteration to prevent the endless loop
+        # counting iteration to prevent from an endless loop
         iteration += 1
         if iteration > 1000:
             break
