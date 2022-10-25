@@ -156,8 +156,7 @@ def inverse(arm: Arm, seg: Seg) -> List[Radian]:
     startPoint = base + np.array([0, 0.1])
     reachalbeLength = totalLength - arm.bat.llen - 0.1
     sp, sq = np.linalg.norm(p - startPoint), np.linalg.norm(q - startPoint)
-    distanceFromStart = sp if sp > sq else sq 
-    if reachalbeLength < distanceFromStart:
+    if reachalbeLength < (sp if sp > sq else sq):
         return None
 
     bs = p if sp > sq else q

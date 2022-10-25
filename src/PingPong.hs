@@ -38,7 +38,7 @@ main = do
 
 main :: IO ()
 main = do
-  let submission = readInterfaceSubmission "BatmanB5"
+  let submission = readInterfaceSubmission "BatmanB6"
 
   p1 <- makePlayer submission
   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
@@ -46,5 +46,5 @@ main = do
 --  danceContest submission p1 p2
   -- play p1 p2
 --  playWithSubmission submission p1 p2
-  gradeSubmission "B5" submission
+  gradeSubmission "B6" submission
   return ()

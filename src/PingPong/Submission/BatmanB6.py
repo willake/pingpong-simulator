@@ -203,3 +203,8 @@ def setFinalAngle(arm: Arm, goal: Pnt):
     dif = angle(u, v)
 
     fjoint.jang = addRadian(fjoint.jang, dif)
+
+#Exercise 6
+def plan(current_time: Second, arm: Arm, time_bound: Second, 
+            seg: Seg, velocity: Vec) -> Control:
+    return [0.0] * NUMLINKS
