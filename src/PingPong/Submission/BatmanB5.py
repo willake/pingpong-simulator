@@ -155,11 +155,13 @@ def inverse(arm: Arm, seg: Seg) -> List[Radian]:
     # the position of end effector
     startPoint = base + np.array([0, 0.1])
     reachalbeLength = totalLength - arm.bat.llen - 0.1
-    if reachalbeLength < np.linalg.norm(p - startPoint):
+    sp, sq = np.linalg.norm(p - startPoint), np.linalg.norm(q - startPoint)
+    distanceFromStart = sp if sp > sq else sq 
+    if reachalbeLength < distanceFromStart:
         return None
 
-    bs = p
-    be = q
+    bs = p if sp > sq else q
+    be = q if sp > sq else p
 
     targetDist = np.linalg.norm(jointPoses[jointCount - 2] - bs)
 
