@@ -88,7 +88,7 @@ testInverse inverter evaluator (ref, (arm, seg), possible) = catchExceptions $ d
                             else do let newArm = applyJointAngles rs arm
                                     points <- evaluator newArm
                                     let newSeg = OpenLineSegment ((last . init) points :+ ()) (last points :+ ())
-                                        correct = newSeg ~= seg
+                                        correct = newSeg ~= seg || flipSegment newSeg ~= seg
                                         val | possible  = 3
                                             | otherwise = 2
                                         sco | correct   = val
