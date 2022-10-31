@@ -130,77 +130,96 @@ def dance(time: Second, arm: Arm) -> Control:
            ,  -20 * math.cos (6.0 * time)
            ]
 
-#Exercise 5
-ITERATIONS = 1000
-from itertools import cycle
+# Exercise 5
+# We use FABRIK to achieve inverse kinematics
+def inverse(arm: Arm, seg: Seg) -> List[Radian]:
+    # evaluateArm returns: base + joints + bat end
+    jointPoses = [pntToArr(pnt) for pnt in evaluateArm(arm)]
+    jointCount = len(jointPoses)
+    # link lengthes + bat length
+    linkLens = [comp[0].llen for comp in arm.comp]
+    linkLens.append(arm.bat.llen)
+    totalLength = sum(linkLens)
+    # position of end effector and base
+    base = np.array(jointPoses[0])
+    p = pntToArr(seg.p)
+    q = pntToArr(seg.q)
 
-def angles(arm: Arm) -> List[Radian]:
-    return [j.jang for _, j in arm.comp]
+    # start point means the start position of controllable joint
+    # since the first joint is fixed(always be [0, 0.1])
+    # we should calculate the reachable point from that
+    # reachable length should remove the fixed joint since it is not controllable,
+    # so it can't be taken into account
+    # we remove bat length because we calculate the distance from 
+    # the position of end effector
+    startPoint = base + np.array([0, 0.1])
+    reachalbeLength = totalLength - arm.bat.llen - 0.1
+    sp, sq = np.linalg.norm(p - startPoint), np.linalg.norm(q - startPoint)
+    if reachalbeLength < (sp if sp > sq else sq):
+        return None
 
-def inverse(arm: Arm, seg: Seg) -> Optional[List[Radian]]:
-    arm, possible = solveInverse(ITERATIONS, arm, seg)
+    bs = p if sp > sq else q
+    be = q if sp > sq else p
 
-    if possible:
-        return angles(arm)
-    else:
-        arm, possible = solveInverse(ITERATIONS, arm, Seg(seg.q, seg.p))
-        if possible:
-            return angles(arm)
+    targetDist = np.linalg.norm(jointPoses[jointCount - 2] - bs)
+
+    iteration = 0
     
-    return None
-
-def solveInverse(iterations: int, arm: Arm, seg: Seg) -> Tuple[Arm, bool]:
-    arm, possible = ccd(iterations, seg.q, arm)
-    setFinalAngle(arm, seg.p)
-
-    return (arm, possible)
-
-def alength(arm: Arm):
-    return len(arm.comp)
-
-def ithjoint(i: int, arm: Arm) -> Joint:
-    if i - 1 >= 0 and i - 1 < alength(arm):
-        return arm.comp[i - 1][1]
-    
-    raise IndexError("Not enough joints.")
-
-def addRadian(s: Radian, t: Radian) -> Radian:
-    return (s + t) % (2 * math.pi)
-
-def ccd(iterations: int, goal: Pnt, arm: Arm) -> Tuple[Arm, bool]:
-    round = 0
-    for i in cycle(range(1, alength(arm) + 1)):
-        joint = ithjoint(i, arm)
-        positions = evaluateArm(arm)
-        pivot = positions[-2]
-
-        distance = (goal - pivot).norm()
-        if distance < EPS:
-            break
-        elif round == iterations:
-            return (arm, False)
-
-        step(joint, positions[i], pivot, goal)
-
-        round = round + 1
-    
-    return (arm, True)
+    while(targetDist > EPS):
+        # forward reaching
+        # set the bat align with segment
+        # move prevJoint to new position by the length of
+        # the link between joints
+        # pj means previous joint, cj means current joint
+        jointPoses[jointCount - 2] = bs
+        jointPoses[jointCount - 1] = be
         
-def step(joint: Joint, jpos: Pnt, pivot: Pnt, goal: Pnt):
-    diff = angle((pivot - jpos), (goal - jpos))
-    frac = 0.999 * diff
-    joint.jang = addRadian(joint.jang, frac)
+        # start with the index of last joint
+        for index in range(jointCount - 3, -1, -1):
+            pj = jointPoses[index]
+            cj = jointPoses[index + 1]
+            d = np.linalg.norm(pj - cj)
+            weight = linkLens[index] / d
+            jointPoses[index] = cj + ((pj - cj) * weight)
+        
+        # backward reaching
+        # set the base joint align with its original position
+        # move nextJoint to new position by the length of 
+        # the link between joints
+        # nj means next joint, cj means current joint
+        jointPoses[0] = base
+        jointPoses[1] = np.array([0, 0.1])
 
-def setFinalAngle(arm: Arm, goal: Pnt):
-    positions = evaluateArm(arm)
-    fjoint = ithjoint(alength(arm), arm)
-    tip = positions[-1]
-    piv = positions[-2]
-    u = tip - piv
-    v = goal - piv
-    dif = angle(u, v)
+        for index in range(1, jointCount - 2):
+            cj = jointPoses[index]
+            nj = jointPoses[index + 1]
+            d = np.linalg.norm(nj - cj)            
+            weight = linkLens[index] / d
+            # calculate the new position for nj
+            jointPoses[index + 1] = cj + ((nj - cj) * weight)
 
-    fjoint.jang = addRadian(fjoint.jang, dif)
+        # update distEnd
+        targetDist = np.linalg.norm(jointPoses[jointCount - 2] - bs)
+        
+        # counting iteration to prevent from an endless loop
+        iteration += 1
+        if iteration > 1000:
+            break
+
+    # calculate radians with positions
+    radians = []
+    prevRadian = np.pi / 2
+    for j in range(1, jointCount - 1):
+        vec = jointPoses[j + 1] - jointPoses[j]
+        r = np.arctan2(vec[1], vec[0])
+        r -= prevRadian
+        radians.append(r)
+        prevRadian += r
+
+    return radians
+
+def pntToArr(pnt: Pnt):
+    return np.array([pnt.x, pnt.y])
 
 #Exercise 6
 def plan(current_time: Second, arm: Arm, time_bound: Second, 
@@ -208,58 +227,60 @@ def plan(current_time: Second, arm: Arm, time_bound: Second,
     # print("======== Set up variables ========")
     jointCount = len([comp for comp in arm.comp])
     # print("======== Get inverse ========")
-    (arm2, possible) = solveInverse(ITERATIONS, arm, seg)
-
+    fangles = inverse(arm, seg)
+    # print(fangles)
     # print("======== Check if possible ========")
-    if possible:
-        print("======== Make pseudo velocity ========")
-        V = makePseudoVelocity(velocity, jointCount)
-        print(V)
-        # print("======== Make Jacobian ========")
-        J = makeJacobian(arm2)
-        # JD = np.linalg.det(J)
-        # print("======== Get pseudo inverse ========")
-        JT = np.linalg.pinv(J)
-        initialVelocities = [comp[1].jvel for comp in arm.comp]
-        # print("======== Multiply result ========")
-        finalVelocities = np.multiply(JT, V)
-        interval = time_bound - current_time
-
-        # print("======== Calculate accelerations ========")
-        # print(calculateAccelerations(initialVelocities, finalVelocities, interval))
-        return calculateAccelerations(initialVelocities, finalVelocities, interval)
-    else:
+    if fangles is None:
         return [0.0] * NUMLINKS
 
-def makePseudoVelocity(velocity: Vec, angleCount: int) -> np.array:
-    m = np.zeros((angleCount, 1))
-    m[0][0] = velocity.a
-    m[1][0] = velocity.b
-    return m
+    # print("======== Make pseudo velocity ========")
+    # print(velocity)
+    V = makePseudoVelocity(velocity, jointCount)
+    J = makeJacobian(arm, fangles)
+    JT = np.linalg.pinv(J)
+    initialVelocities = [comp[1].jvel for comp in arm.comp]
+    finalVelocities = np.matmul(JT, V)
+    
+    interval = time_bound - current_time
 
-def makeJacobian(arm: Arm) -> np.array:
-    links = [comp[0] for comp in arm.comp]
+    # print("======== Calculate accelerations ========")
+    # print(calculateAccelerations(initialVelocities, finalVelocities, interval))
+    return calculateAccelerations(initialVelocities, finalVelocities, interval)
+
+def makePseudoVelocity(velocity: Vec, angleCount: int) -> np.array:
+    # m = np.zeros((2, 1))
+    # m[0][0] = velocity.a
+    # m[1][0] = velocity.b
+    # return m
+    return np.array([velocity.a, velocity.b])
+
+def makeJacobian(arm: Arm, fangles: list[Radian]) -> np.array:
+    links = [comp[0].llen for comp in arm.comp]
     links.append(arm.bat.llen)
     joints = [comp[1] for comp in arm.comp]
     count = len(joints)
     m = np.zeros((2, len(joints)))
     row1 = 0
-    row1AngleSum = sum(angles)
+    row1AngleSum = sum(fangles)
     row2 = 0
-    row2AngleSum = sum(angles)
+    row2AngleSum = sum(fangles)
     
     # do row 1
     for index in range(count - 1, 0, -1):
         row1 += -1 * links[index] * np.sin(row1AngleSum)
-        row1AngleSum -= angles[index]
+        row1AngleSum -= fangles[index]
         m[0][index] = row1
     # do row 2
     for index in range(count - 1, 0, -1):
         row2 += links[index] * np.cos(row2AngleSum)
-        row2AngleSum -= angles[index]
-        m[1][index] = row2
+        row2AngleSum -= fangles[index]
+        m[0][index] = row2
 
     return m
+
+# def solvePolynomitalFitting(a1: Radian, v1: Radian, a2: Radian, v2: Radian):
+#     np.array(
+#         [])
 
 # v2 = v1 + (a*t)
 # finalVelocities = initialVelocities + (acc * interval)
