@@ -12,6 +12,5 @@ assignment = "B7"
 
 -- TEST CASES
 
-type TestInput  = ()
-type TestOutput = ()
-type TestCase   = (TestCaseRef, TestInput, TestOutput)
+type TestInput  = BallState
+type TestCase   = (TestCaseRef, TestInput)

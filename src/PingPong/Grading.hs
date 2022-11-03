@@ -5,8 +5,9 @@ import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
 import PingPong.Grading.Reports
 import PingPong.Grading.Assignments
-import PingPong.Submission
+import PingPong.Submission hiding (catchErrorCall, catchInterfaceException, catchExceptions)
 import PingPong.Submissions (submissions)
+import PingPong.Communication.Types
 import PingPong.Communication.Interface
 
 import Data.List
@@ -15,22 +16,12 @@ import Control.Monad
 import Control.Lens
 --import Control.Lens.Tuple
 import Control.Exception
+import System.Timeout
 
 main :: IO ()
 main = do
 
---  generateTestCases "B6"
-
-  gradeAssignment "B6"
-
-{-
-  gradeAssignment "B1"
-  gradeAssignment "B2"
-  gradeAssignment "B3"
-  gradeAssignment "B4"
--}
-
--- TODO: move to module Grading.Main
+  gradeAssignment "B7"
 
 gradeAssignment :: Assignment -> IO ()
 gradeAssignment i = do
@@ -54,11 +45,17 @@ gradeSubmission i sub = handle catchIOException $ handle catchInterfaceException
   putStrLn $ "checking submission " ++ name ++ " for assignment " ++ i
   han $ do
     cases   <- getTestCaseRefs i
-    results <- han $ mapM (checkSubmission i (name, arm) sub) cases
+    results <- han $ mapM (timeLimit . checkSubmission i (name, arm) sub) cases
     writeReport name i $ zip cases results
     -- terminate sub
     return results
 
+timeLimit :: IO TestResult -> IO TestResult
+timeLimit f = do
+  let mus = 60 * 1000000
+  mr <- timeout mus f
+  case mr of Just r  -> return r
+             Nothing -> return $ failure {message = "timeout (computation took longer than " ++ show mus ++ " microseconds)"}
 
 catchInterfaceException :: InterfaceException -> IO [TestResult]
 catchInterfaceException e = do
@@ -85,4 +82,3 @@ catchIOExceptionWithName name e = do
   putStrLn $ "unable to check submission " ++ name
   putStrLn $ show e
   return $ repeat failure {message = show e}
-

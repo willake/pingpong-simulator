@@ -27,9 +27,9 @@ main = do
   p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
 
 --  danceContest submission p1 p2
-  play p1 p2
+  play p1 p1
 --  playWithSubmission submission p1 p2
---  gradeSubmission "B5" submission
+--  gradeSubmission "B7" submission
   return ()
 -}
 
@@ -38,13 +38,13 @@ main = do
 
 main :: IO ()
 main = do
-  let submission = readInterfaceSubmission "BatmanB6"
+  let submission = readInterfaceSubmission "ModelPythonSubmission"
 
   p1 <- makePlayer submission
-  p2 <- makePlayer $ nativeToIOSubmission $ ExampleNativeSubmission.submission
+  p2 <- makePlayer $ nativeToIOSubmission $ ModelNativeSubmission.submission
 
 --  danceContest submission p1 p2
-  -- play p1 p2
+  play p1 p2
 --  playWithSubmission submission p1 p2
-  gradeSubmission "B6" submission
+--  gradeSubmission "B7" submission
   return ()

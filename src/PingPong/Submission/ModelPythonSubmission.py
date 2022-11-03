@@ -4,6 +4,8 @@ import logging
 import numpy as np
 import math
 from itertools import accumulate
+import copy
+import operator
 
 GRAVITY = 2.0
 SPEED_CAP = 2.0
@@ -11,16 +13,26 @@ ACCEL_CAP = 5.0
 # Change to adapt the level of ouput from the python server:
 # Values are DEBUG, INFO, ERROR
 LOGGING_LEVEL = logging.ERROR
-EPS = 0.00001
+EPS = 0.0001
 
-def almost(number: float, to: float) -> bool:
+NUMLINKS     = 4
+
+BAT_COLOR    = "#341235"
+
+LINK_COLORS  = ["#a111b2"]  *  NUMLINKS
+LINK_LENGTHS = [0.3, 0.3, 0.3, 0.3]
+
+JOINT_COLORS = ["#777777"] * NUMLINKS
+JOINT_ANGLES = [-0.7, 1.2, 1.0, -0.5]
+
+def almostZero(number: float) -> bool:
     if abs(number) < EPS:
         return True
     return False
 
 def cap(real: float, capval: float) -> float:
     realabs = abs(real)
-    if almost(realabs - capval, 0) or realabs > capval:
+    if almostZero(realabs - capval) or realabs > capval:
         if real < 0:
             return -capval
         return capval
@@ -38,19 +50,17 @@ def name() -> str:
     return "pyping"
 
 def make_arm() -> Arm:
-    arm = Arm([], Bat("#341235"))
+    arm = Arm([], Bat(BAT_COLOR))
 
-    for i in range(1,6):
-        link = Link("#a111b2", 0.2)
-        joint = Joint(f"#{i}{i}{i}{i}{i}{i}", 0)
+    for i in range(NUMLINKS):
+        link = Link(LINK_COLORS[i], LINK_LENGTHS[i])
+        joint = Joint(JOINT_COLORS[i], JOINT_ANGLES[i])
         arm.append(link, joint)
 
     return arm
 
 #Exercise 2
 def detectCollision(snap1: Snapshot, snap2: Snapshot) -> Optional[Second]:
-    print("DETECT")
-    print(snap1, snap2)
     pocos = potentialCollisions(snap1, snap2)
     time = None
     for poco in pocos:
@@ -71,8 +81,8 @@ def collisionTime(snap1: Snapshot, snap2: Snapshot, t: float) -> Second:
 
 def computeSegParameter(xa: float, xb: float, xc: float, xd: float, ya: float, yb: float, yc:float, yd: float, t: float) -> Optional[float]:
     f = 0.0
-    x_zero = almost(xa + xc * t, 0)
-    y_zero = almost(ya + yc * t, 0)
+    x_zero = almostZero(xa + xc * t)
+    y_zero = almostZero(ya + yc * t)
     if x_zero and y_zero:
         f = None
     elif x_zero:
@@ -121,7 +131,7 @@ def potentialCollisions(snap1: Snapshot, snap2: Snapshot) -> List[List[float]]:
         if f != None:
             fs.append(f) 
 
-    print(sorted(zip(ts, fs))) 
+    # print(sorted(zip(ts, fs))) 
     return sorted(zip(ts, fs))
 
 
@@ -134,17 +144,16 @@ def solve_bzero(a: float, b: float, c: float) -> List[float]:
     if val_sign < 0:
         return []
     else:
-        return (math.sqrt(val))
+        return [math.sqrt(val)]
 
 def solve_czero(a: float, b: float, c: float) -> List[float]:
-    sorted([0, -b / a])
+    return sorted([0, -b / a])
 
 def solve_nonzero(a: float, b: float, c: float) -> List[float]:
     d = (b * b) - 4 * a * c
     d_sign = math.copysign(1.0, d)
-    # print(d_sign, d > 0, d)
 
-    if almost(d, 0):
+    if almostZero(d):
         return [-b / (2 * a)]
     elif d > 0:
         return [((-b) - math.sqrt(d)) / (2 * a), ((-b) + math.sqrt(d)) / (2 * a)]
@@ -153,13 +162,9 @@ def solve_nonzero(a: float, b: float, c: float) -> List[float]:
 
 def solve_quadratic_eq(a: float, b: float, c: float) -> List[float]:
     res = []
-    a_zero = almost(a, 0)
-    b_zero = almost(b, 0)
-    c_zero = almost(c, 0)
-
-    # print(a, b, c)
-    # print(a_zero, b_zero, c_zero)
-    # print(almost(a / b, 0.0), almost(a / c, 0.0))
+    a_zero = almostZero(a)
+    b_zero = almostZero(b)
+    c_zero = almostZero(c)
     
     if c_zero and (a_zero or b_zero):
         res = [0] 
@@ -171,7 +176,7 @@ def solve_quadratic_eq(a: float, b: float, c: float) -> List[float]:
         res = solve_bzero(a, b, c)
     elif a_zero:
         res = solve_azero(a, b, c)
-    elif almost(a / b, 0.0) or almost(a / c, 0.0):
+    elif almostZero(a / b) or almostZero(a / c):
         res = solve_quadratic_eq(0.0, b, c)
     else:
         res = solve_nonzero(a, b, c)
@@ -311,25 +316,184 @@ def collisionVelocity(snap1, snap2, time, f) -> Vec:
     res = v_ref + v_seg
     return res
 
-
-
-
-
-
-
-
-
 #Exercise 5
-def inverse(arm: Arm, seg: Seg) -> List[Radian]:
-    return [0.0] * len(arm.comp) 
+ITERATIONS = 1000
+from itertools import cycle
+
+def angles(arm: Arm) -> List[Radian]:
+    return [j.jang for _, j in arm.comp]
+
+def inverse(arm: Arm, seg: Seg) -> Optional[List[Radian]]:
+    arm, possible = solveInverse(ITERATIONS, arm, seg)
+
+    if possible:
+        return angles(arm)
+    else:
+        arm, possible = solveInverse(ITERATIONS, arm, Seg(seg.q, seg.p))
+        if possible:
+            return angles(arm)
+    
+    return None
+
+def solveInverse(iterations: int, arm: Arm, seg: Seg) -> Tuple[Arm, bool]:
+    arm, possible = ccd(iterations, seg.p, arm)
+    setFinalAngle(arm, seg.q)
+
+    return (arm, possible)
+
+def alength(arm: Arm):
+    return len(arm.comp)
+
+def ithjoint(i: int, arm: Arm) -> Joint:
+    if i - 1 >= 0 and i - 1 < alength(arm):
+        return arm.comp[i - 1][1]
+    
+    raise IndexError("Not enough joints.")
+
+def addRadian(s: Radian, t: Radian) -> Radian: 
+    return (s + t) % (2 * math.pi)
+
+def ccd(iterations: int, goal: Pnt, arm: Arm) -> Tuple[Arm, bool]:
+    round = 0
+    for i in cycle(range(1, alength(arm) + 1)):
+        joint = ithjoint(i, arm)
+        positions = evaluateArm(arm)
+        pivot = positions[-2]
+
+        distance = (goal - pivot).norm()
+        if distance < EPS:
+            break
+        elif round == iterations:
+            return (arm, False)
+
+        step(joint, positions[i], pivot, goal)
+
+        round = round + 1
+    
+    return (arm, True)
+        
+def step(joint: Joint, jpos: Pnt, pivot: Pnt, goal: Pnt):
+    diff = angle((pivot - jpos), (goal - jpos))
+    frac = 0.999 * diff
+    joint.jang = addRadian(joint.jang, frac)
+
+def setFinalAngle(arm: Arm, goal: Pnt):
+    positions = evaluateArm(arm)
+    fjoint = ithjoint(alength(arm), arm)
+    tip = positions[-1]
+    piv = positions[-2]
+    u = tip - piv
+    v = goal - piv
+    dif = angle(u, v)
+
+    fjoint.jang = addRadian(fjoint.jang, dif)
 
 #Exercise 6
+def rotate90(vec: Vec) -> Vec:
+    return Vec(-vec.b, vec.a)
+
+def computeVector(p: Pnt, q: Pnt) -> Vec:
+    return rotate90(p - q)
+
+def iterativeLinearCombination(iterations, goal, vectors, current):
+    round = 0
+    while round < iterations:
+        now = linearCombination(current, vectors)
+        dif = goal - now
+
+        if almostZero(dif.a) and almostZero(dif.b):
+            return current
+
+        current = update(dif, vectors, current)
+
+        round += 1
+
+    return current
+
+def update(dif, vectors, current):
+    new = []
+    for v, c in zip(vectors, current):
+        new.append(updateCoefficient(dif, v, c))
+
+    return new
+
+def updateCoefficient(dif, v, c):
+    if almostZero(v.a) and almostZero(v.b):
+        return c
+
+    d = project(dif, v)
+    x = d - c 
+    return capspeed(c + 0.3 * x)
+
+def project(u: Vec, v: Vec) -> float:
+    return u * (v / v.norm())
+
+def linearCombination(current: List[float], vectors: List[Vec]) -> Vec:
+    mults = [c * v for c, v in zip(current, vectors)]
+    return sum(mults, Vec(0,0))
+
+def inverseVelocityKinematics(arm, goal):
+    points = evaluateArm(arm)[1:-1]
+    pivot = points[-1]
+    vectors = list(map(lambda p: computeVector(pivot, p), points))
+    current = [j.jvel for _, j in arm.comp]
+    s = iterativeLinearCombination(10, goal, vectors, current)
+    s[-1] = -sum(s[:-1])
+
+    for (_, joint), si in zip(arm.comp, s):
+        joint.jvel = si
+
+    return arm
+
 def plan(current_time: Second, arm: Arm, time_bound: Second, 
             seg: Seg, velocity: Vec) -> Control:
-    return [0.0] * len(arm.comp) 
+
+    current_arm = copy.deepcopy(arm)
+    goalArm, possible = solveInverse(10, current_arm, seg)
+    inverseVelocityKinematics(goalArm, velocity)
+
+    span = time_bound - current_time
+    control = []
+    for (_, cjoint) , (_, gjoint) in zip(arm.comp, goalArm.comp):
+        acc = planJoint(span, cjoint, gjoint)
+        control.append(acc)
+
+    return control
+
+def modAngle(a):
+    return ((a + math.pi) % (2 * math.pi)) - math.pi
+
+def planJoint(span: Second, cjoint: Joint, gjoint: Joint) -> RadianPerSquareSecond:
+    current = DataPoint(0.0, modAngle(cjoint.jang), cjoint.jvel)
+    goal = DataPoint(span, modAngle(gjoint.jang), gjoint.jvel)
+    res = fitCubic(current, goal)
+
+    return 2 * res[1]
+
+@dataclass
+class DataPoint:
+    time: Second
+    angle: Radian
+    velocity: RadianPerSecond
+
+def fitCubic(p0: DataPoint, p1: DataPoint):
+    m = np.array([
+        [    p0.time ** 3,     p0.time ** 2, p0.time, 1],
+        [    p1.time ** 3,     p1.time ** 2, p1.time, 1],
+        [3 * p0.time ** 2, 2 * p0.time     ,       1, 0],
+        [3 * p1.time ** 2, 2 * p1.time     ,       1, 0]
+    ])
+    r = np.array([p0.angle, p1.angle, p0.velocity, p1.velocity])
+
+    if np.linalg.det(m) == 0:
+        return [0, 0, 0, 0]
+    
+    return np.linalg.inv(m) @ r
 
 #Exercise 7
 def action(time: Second, item: Item, arm: Arm, ball: BallState) -> Control:
-    return plan(time, arm, 8.7, Seg(Pnt(-0.3, 0.7), Pnt(-0.3, 0.8)), Vec(-1.0, 0.0))
+    goalTime = 8.7
+    goalSeg = Seg(Pnt(-0.3, 0.7), Pnt(-0.3, 0.8))
+    goalVel = Vec(-1, 0)
 
-
+    return plan(time, arm, goalTime, goalSeg, goalVel)

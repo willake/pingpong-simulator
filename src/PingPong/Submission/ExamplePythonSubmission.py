@@ -14,7 +14,7 @@ LINK_COLORS  = ["#a111b2"]  *  NUMLINKS
 LINK_LENGTHS = [0.45, 0.15, 0.15, 0.15]
 
 JOINT_COLORS = ["#777777"] * NUMLINKS
-JOINT_ANGLES = [-0.3, 0.2, 0.2, -0.2]
+JOINT_ANGLES = [-0.3, 0, 0, 0]
 
 #Exercise 1
 def name() -> str:
@@ -59,12 +59,12 @@ def handleCollision(snap1: Snapshot, snap2: Snapshot, time: Second) -> Tuple[Pnt
 
 #Exercise 5
 def inverse(arm: Arm, seg: Seg) -> List[Radian]:
-    return [0.0] * len(arm.comp) 
+    return [0.0] * len(arm.comp)
 
 #Exercise 6
 def plan(current_time: Second, arm: Arm, time_bound: Second, 
             seg: Seg, velocity: Vec) -> Control:
-    return [0.0] * len(arm.comp) 
+    return [0.0] * len(arm.comp)
 
 #Exercise 7
 def action(time: Second, item: Item, arm: Arm, ball: BallState) -> Control:

@@ -1,11 +1,12 @@
-module PingPong.Grading.B2.Checker (getTestCaseRefs, checkSubmission) where
+module PingPong.Grading.B2.Checker (getTestCaseRefs, checkSubmission, validateTestCases) where
 
 import PingPong.Grading.B2.Types
 
 import PingPong.Model hiding (score)
 import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
-import PingPong.Submission
+import PingPong.Submission hiding (catchErrorCall, catchInterfaceException, catchExceptions)
+import PingPong.Communication.Types
 import PingPong.Communication.Interface
 
 import Data.Geometry hiding (init, head, replicate)
@@ -58,7 +59,7 @@ testCollision detector (ref, (state1, state2), correctAnswer) = catchExceptions 
           | otherwise = 0
       mes | correct   = "correct result: " ++ writeCollisionOutput givenAnswer
           | otherwise = "incorrect result: " ++ writeCollisionOutput givenAnswer ++ " should have been " ++ writeCollisionOutput correctAnswer
-      result = TestResult { trid    = tcid ref
+      result = testResult { trid    = tcid ref
                           , success = True
                           , score   = sco
                           , message = mes
@@ -79,3 +80,52 @@ writeCollisionOutput :: TestOutput -> String
 writeCollisionOutput Nothing = "no collision"
 writeCollisionOutput (Just t) = "collision at time " ++ show t
 
+-- validate test case by performing forward interpolation
+-- should call this during generation process
+
+validateTestCases :: IO ()
+validateTestCases = do
+  refs <- getTestCaseRefs
+  bs <- sequence $ map validateTestCase refs
+  putStrLn $ "number of valid cases: " ++ show (length $ filter id bs)
+
+validateTestCase :: TestCaseRef -> IO Bool
+validateTestCase ref = do
+  (_, input, output) <- getTestCase ref
+  putStr $ "validating test case " ++ show (tcid ref) ++ ": "
+  let valid = case output of Just t  -> validateTrueCase input t
+                             Nothing -> validateFalseCase input
+  putStrLn $ show valid
+  return valid
+
+validateTrueCase :: TestInput -> Second -> Bool
+validateTrueCase ((t1, p1, s1), (t2, p2, s2)) t | t  <= t1  = False
+                                                | t  >= t2  = False
+                                                | otherwise =
+  let u = (t - t1) / (t2 - t1)
+      p = interpolate' u p1 p2
+      a = interpolate' u (s1 ^. start . core) (s2 ^. start . core)
+      b = interpolate' u (s1 ^. end   . core) (s2 ^. end   . core)
+      sd = segmentDistance p a b
+--      (sd, _) = sqDistanceToSegArg p (OpenLineSegment (a :+ ()) (b :+ ())) 
+      -- this is weird! distance to line and distance to segment are not the same
+  in sd < 0.0001
+
+segmentDistance :: Pnt -> Pnt -> Pnt -> Float
+segmentDistance p a b = 
+  let dl = sqrt $ sqDistanceTo p (lineThrough a b) 
+      dx = intervalDistance (p ^. xCoord) (a ^. xCoord) (b ^. xCoord)
+      dy = intervalDistance (p ^. yCoord) (a ^. yCoord) (b ^. yCoord)
+  in maximum [dl, dx, dy]
+
+intervalDistance :: Float -> Float -> Float -> Float
+intervalDistance x a b | a > b            = intervalDistance x b a
+                       | x < a            = a - x
+                       | a <= x && x <= b = 0
+                       | x > b            = b - x
+
+interpolate' :: Float -> Pnt -> Pnt -> Pnt 
+interpolate' u p q = origin .+^ (u *^ (q .-. origin) ^+^ (1 - u) *^ (p .-. origin))
+
+validateFalseCase :: TestInput -> Bool
+validateFalseCase _ = True -- how to validate this?

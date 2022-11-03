@@ -22,7 +22,6 @@ submissions = do
 
 
 
-
 -- Native submissions must be explicitly listed, since they must be known at compile time.
 nativeSubmissions :: [Submission]
 nativeSubmissions = 

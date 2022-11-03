@@ -3,7 +3,8 @@ module PingPong.Grading.B4.Checker (getTestCaseRefs, checkSubmission) where
 import PingPong.Model hiding (score)
 import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
-import PingPong.Submission
+import PingPong.Submission hiding (catchErrorCall, catchInterfaceException, catchExceptions)
+import PingPong.Communication.Types
 import PingPong.Communication.Interface
 
 import Data.Geometry hiding (init, head, replicate)
@@ -79,7 +80,7 @@ testCollision handler (ref, (state1, state2, t), correctAnswer) = catchException
           | otherwise                = 0
       mes | correctPnt && correctVec = "correct result: " ++ writeCollisionOutput givenAnswer
           | otherwise                = "incorrect result: " ++ writeCollisionOutput givenAnswer ++ " should have been " ++ writeCollisionOutput correctAnswer
-      result = TestResult { trid    = tcid ref
+      result = testResult { trid    = tcid ref
                           , success = True
                           , score   = sco
                           , message = mes

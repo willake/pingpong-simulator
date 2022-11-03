@@ -16,3 +16,8 @@ cRoom  = sRGB 0.9 0.9 1.0
 cTable = sRGB 0.2 0.4 0.1 
 cNet   = sRGB 0.2 0.2 0.2 
 cBall  = orange  
+
+cGreen :: Colour Float
+cRed   :: Colour Float
+cGreen = sRGB 0.2 0.8 0.1 
+cRed   = sRGB 0.8 0.1 0.2 
