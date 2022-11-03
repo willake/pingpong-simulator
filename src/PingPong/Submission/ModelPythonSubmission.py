@@ -215,11 +215,11 @@ def evaluateArm(arm: Arm) -> List[Pnt]:
 
     return pnts
 
-def make_global(ts: [np.array]):
+def make_global(ts: np.array):
     gts = list(accumulate(ts, np.matmul, initial=identity()))
     return gts
 
-def transformations(arm: Arm) -> [np.array]:
+def transformations(arm: Arm) -> np.array:
     ts = []
     for link, joint in arm.comp:
         tlink, rjoint = transformation(link, joint)
