@@ -2,6 +2,7 @@
 # PingPong Simulator v3.1.4
 # Assignment B5
 import logging
+from time import time
 import numpy as np
 from typing import Optional, Tuple
 from PPData import * 
@@ -224,28 +225,31 @@ def pntToArr(pnt: Pnt):
 #Exercise 6
 def plan(current_time: Second, arm: Arm, time_bound: Second, 
             seg: Seg, velocity: Vec) -> Control:
-    # print("======== Set up variables ========")
+    # print("current_time", current_time)
+    # print("timebound", time_bound)
     jointCount = len([comp for comp in arm.comp])
-    # print("======== Get inverse ========")
-    fangles = inverse(arm, seg)
-    # print(fangles)
-    # print("======== Check if possible ========")
-    if fangles is None:
+    angles2 = inverse(arm, seg)
+
+    if angles2 is None:
         return [0.0] * NUMLINKS
 
-    # print("======== Make pseudo velocity ========")
-    # print(velocity)
     V = makePseudoVelocity(velocity, jointCount)
-    J = makeJacobian(arm, fangles)
+    J = makeJacobian(arm, angles2)
     JT = np.linalg.pinv(J)
-    initialVelocities = [comp[1].jvel for comp in arm.comp]
-    finalVelocities = np.matmul(JT, V)
+    angles1 = [comp[1].jang for comp in arm.comp]
+    velocities1 = [comp[1].jvel for comp in arm.comp]
+    # velocities2 = np.matmul(JT, V)
+    velocities2 = [0.0] * jointCount
+    accelrations = [0.0] * jointCount
+    for index in range(0, jointCount):
+        params = solvePolynomitalFitting(
+            angles1[index], velocities1[index], angles2[index], velocities2[index])
+        accelrations[index] = (calculateVelocity(params, 60 / 50) - velocities1[index]) / (60 / 50)
     
-    interval = time_bound - current_time
-
+    print(accelrations)
     # print("======== Calculate accelerations ========")
     # print(calculateAccelerations(initialVelocities, finalVelocities, interval))
-    return calculateAccelerations(initialVelocities, finalVelocities, interval)
+    return accelrations
 
 def makePseudoVelocity(velocity: Vec, angleCount: int) -> np.array:
     # m = np.zeros((2, 1))
@@ -278,10 +282,21 @@ def makeJacobian(arm: Arm, fangles: list[Radian]) -> np.array:
 
     return m
 
-# def solvePolynomitalFitting(a1: Radian, v1: Radian, a2: Radian, v2: Radian):
-#     np.array(
-#         [])
+def solvePolynomitalFitting(a1: Radian, v1: Radian, a2: Radian, v2: Radian):
+    M = np.array([
+        [2, 1, -2, 1],
+        [-3, -2, 3, -1],
+        [0, 1, 0, 0],
+        [1, 0, 0, 0]])
+    V = np.array([
+        [a1],
+        [v1],
+        [a2],
+        [v2]])
+    return np.matmul(M, V)
 
+def calculateVelocity(params: np.array, t: Second):
+    return ((params[0][0] * (t * t * t)) + (params[1][0] * (t * t)) + (params[2][0] * t)) + params[3][0]
 # v2 = v1 + (a*t)
 # finalVelocities = initialVelocities + (acc * interval)
 # acc = (finalVelocities - initialVelocities) / interval
