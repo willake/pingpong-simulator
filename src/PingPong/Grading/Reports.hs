@@ -12,6 +12,14 @@ import Control.Monad
 import Control.Lens
 import Control.Exception
 
+import Codec.Picture( PixelRGBA8( .. ), writePng )
+import Graphics.Rasterific
+
+import System.Directory
+import System.Process
+
+frameRate = 50
+
 -- INDIVIDUAL REPORT
 
 writeReport :: String -> Assignment -> [(TestCaseRef, TestResult)] -> IO ()
@@ -19,13 +27,16 @@ writeReport name i results = do
   let cs = unlines $ zipWith (rep $ length results) [1..] results
       scores = sum $ map (score . snd) results
       values = sum $ map (value . fst) results
+      frames = concatMap (recording . snd) results
       report = "report for " ++ name ++ ", assignment " ++ i ++ "\n"
             ++ replicate 80 '-' ++ "\n" 
             ++ cs
             ++ replicate 80 '-' ++ "\n" 
             ++ show scores ++ " points out of " ++ show values ++ " possible"
             ++ "\n" ++ "grade: " ++ show (round2 $ grade values scores)
+  createDirectoryIfMissing True reportsDir
   writeFile (reportsDir ++ systemName name ++ "_" ++ i ++ "_report.txt") report 
+  when (not $ null frames) $ exportRecording frames name i
 
 systemName :: String -> String
 systemName = filter isAlphaNum
@@ -57,6 +68,37 @@ round2 x = 0.01 * (f $ round $ 100 * x)
 -- something for ignoring the worst 10 shots, move?
 best :: Int -> [Int] -> Int
 best n xs = sum $ take n $ reverse $ sort xs
+
+
+
+-- RECORDING REPORT
+
+
+
+exportRecording :: [Drawing PixelRGBA8 ()] -> String -> Assignment -> IO ()
+exportRecording pics name i = do
+  createDirectoryIfMissing True $ recordingsDir ++ "frame/"
+  putStr "recording"
+  sequence_ $ zipWith exportFrame [1..] pics
+  putStrLn "done!"
+  let path = recordingsDir ++ systemName name ++ "_" ++ i ++ "_report.mp4"
+  createDirectoryIfMissing True recordingsDir
+  callCommand $ "ffmpeg -y -r " ++ show frameRate ++ " -f image2 -s 1920x1080 -i " ++ recordingsDir ++ "frame/%d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p " ++ path
+  removeDirectoryRecursive $ recordingsDir ++ "frame/"
+
+exportFrame :: Int -> Drawing PixelRGBA8 () -> IO ()
+exportFrame i pic = do
+  let white = PixelRGBA8 255 255 255 255
+      img = renderDrawing 1920 1080 white pic
+  writePng (recordingsDir ++ "frame/" ++ show i ++ ".png") img
+  putStr $ frameMark i
+
+frameMark :: Int -> String
+frameMark i | i `mod` (60 * round frameRate) == 0 = show $ i `div` round frameRate
+            | i `mod` (10 * round frameRate) == 0 = "#" 
+            | i `mod` round frameRate == 0 = "|" 
+            | otherwise                    = "."
+
 
 
 

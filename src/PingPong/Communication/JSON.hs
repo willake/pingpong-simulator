@@ -25,7 +25,6 @@ import Control.Lens hiding ((.=))
 -- instance ToJSON   Link      where toEncoding = genericToEncoding defaultOptions
 -- instance ToJSON   Arm       where toEncoding = genericToEncoding defaultOptions
 -- instance ToJSON   BallState where toEncoding = genericToEncoding defaultOptions
-instance FromJSON BallState
 -- instance ToJSON   Item      where toEncoding = genericToEncoding defaultOptions
 instance FromJSON Item
 instance ToJSON   Owner     where toEncoding = genericToEncoding defaultOptions
@@ -115,6 +114,11 @@ instance ToJSON BallState where
     
     toEncoding state =
         pairs ("location" .= loc state <> "direction" .= dir state)
+
+instance FromJSON BallState where
+    parseJSON = withObject "BallState" $ \v -> BallState
+        <$> v .: "location"
+        <*> v .: "direction"
 
 item_id :: Item -> Int
 item_id Air = 0

@@ -9,7 +9,7 @@ import PingPong.Simulation.Collision hiding (modelHandler, modelDetector)
 
 import Control.Lens
 
-import Data.Geometry hiding (head, init, replicate)
+import Data.Geometry hiding (head, init)
 import Data.Geometry.Matrix
 import Data.Ext
 import Data.List hiding (head, init, intersect)
@@ -296,32 +296,230 @@ angle (Vector2 x1 y1) (Vector2 x2 y2) = atan2 (x1 * y2 - y1 * x2) (x1 * x2 + y1 
 angle' :: (Arity d, Floating r) => Vector d r -> Vector d r -> r
 angle' u v = dot u v / norm u / norm v
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+---------------------
 -- FOR EXERCISE B5 --
+---------------------
+
 
 inverse :: Arm -> Seg -> Maybe [Radian]
-inverse _ _ = Nothing
+inverse arm seg = 
+  let numberOfIterations = 1000
+      (result1, ce1) = solveInverseKinematics numberOfIterations seg arm
+      (result2, ce2) = solveInverseKinematics numberOfIterations (flipSegment seg) arm
+  in if ce1 then Just $ jointAngles result1 else if ce2 then Just $ jointAngles result2 else Nothing
 
+solveInverseKinematics :: Int -> Seg -> Arm -> (Arm, Bool)
+solveInverseKinematics numberOfIterations seg arm =
+  let goal      = seg ^. start . core
+      (sol, ce) = solve numberOfIterations goal arm
+      fang      = finalAngle sol $ seg ^. end . core
+      result    = setFinalAngle fang sol
+  in (result, ce)
+
+-- | Solve approximate inverse kinematics putting the final joint at the goal location, 
+--   ignoring the orientation of the bat.
+solve :: Int -> Pnt -> Arm -> (Arm, Bool)
+solve numberOfIterations pnt arm =
+  let iterativeCyclicDescent :: Int -> Int -> Arm -> (Arm, Bool)
+      iterativeCyclicDescent 0 _     arm = (arm, False)
+      iterativeCyclicDescent n index arm | index >= numberOfJoints arm = iterativeCyclicDescent n 1 arm
+      iterativeCyclicDescent n index arm = 
+        let piv = evaluatePivot arm
+            vec = pnt .-. piv
+        in if norm vec < epsilon then (arm, True)
+           else let updatedArm = updateArm index pnt arm
+                in iterativeCyclicDescent (n - 1) (index + 1) updatedArm
+                -- Would be better to also check whether making enough progress.
+  in iterativeCyclicDescent numberOfIterations 1 arm
+
+-- Update an arm by changing the ith joint angle to get the pivot to move closer to the desired point.
+updateArm :: Int -> Pnt -> Arm -> Arm
+updateArm i p a = 
+  let piv = evaluatePivot a
+      ith = evaluateArm a !! i
+      cur = jointAngles a !! (i - 1)
+      dif = angle (piv .-. ith) (p .-. ith)
+      frc = 0.999 * dif -- move only a fraction to avoid local minima
+      new = addRadian cur frc
+  in setJointAngle i new a    
+
+evaluatePivot :: Arm -> Pnt
+evaluatePivot arm = last $ init $ evaluateArm arm
+
+-- | Compute exactly the angle needed for the final joint to reach in the
+--   direction of the given point.
+finalAngle :: Arm -> Pnt -> Radian
+finalAngle arm pnt = 
+  let tip = last $        evaluateArm arm
+      piv = last $ init $ evaluateArm arm
+      cur = last $        jointAngles arm
+      u   = (tip .-. piv)
+      v   = (pnt .-. piv) 
+      dif = angle u v
+  in addRadian cur dif
+
+setFinalAngle :: Radian -> Arm -> Arm
+setFinalAngle ang arm = setJointAngle (length $ jointAngles arm) ang arm
+
+-- | Set the ith joint (counting from 1).
+setJointAngle :: Int -> Radian -> Arm -> Arm
+setJointAngle i r a | i > numberOfJoints a = error "setJointAngle: index too large"
+setJointAngle i r a | i < 1                = error "setJointAngle: index too small"
+setJointAngle 1 r (Extend l j a) = Extend l (j {jang = r}) a
+setJointAngle i r (Extend l j a) = Extend l j $ setJointAngle (i - 1) r a
+setJointAngle _ r (End l) = error "There is no angle to set."
+
+numberOfJoints :: Arm -> Int
+numberOfJoints = length . jointAngles
+
+jointAngles :: Arm -> [Radian]
+jointAngles (Extend l j a) = jang j : jointAngles a
+jointAngles _ = []
+
+
+addRadian :: Radian -> Radian -> Radian
+addRadian a b = (a + b) `mod'` (2 * pi)
+
+---------------------
 -- FOR EXERCISE B6 --
+---------------------
+
+
+-- Given an arm and a desired velocity vector for the pivot (first endpoint of the
+-- bat), compute a list of angular velocities for the joints that achieves this..
+inverseVelocity :: Arm -> Vec -> Motion
+inverseVelocity arm goal = 
+  let points  = tail $ init $ evaluateArm arm
+      pivot   = last $ points
+      vectors = map (computeVector pivot) points
+      -- maybe we don't just want a solution, but one that is close to the current velocities?
+      current = map jvel (armJoints arm)
+      numberOfIterations = 10
+      speeds  = iterativeLinearCombination numberOfIterations goal vectors current
+  in updateFinalSpeed speeds
+{-
+  in case findLinearCombination vectors goal
+     of Just coefficients -> coefficients
+        Nothing           -> current
+-}
+
+-- Set the speed of the last joint such that the last segment keeps its orientation.
+updateFinalSpeed :: [RadianPerSecond] -> [RadianPerSecond]
+updateFinalSpeed xs = let ys = init xs in ys ++ [negate $ sum ys]
+
+computeVector :: Pnt -> Pnt -> Vec 
+computeVector q p = rotate90 $ q .-. p
+
+-- findLinearCombination :: [Vec] -> Vec -> Maybe [Float]
+
+-- Given a current set of coefficients and vectors, find a set of coefficients close
+-- to the current ones that achieves the goal vector
+iterativeLinearCombination :: Int -> Vec -> [Vec] -> [Float]-> [Float]
+iterativeLinearCombination 0 goal vs fs = fs
+iterativeLinearCombination n goal vs fs =
+  let now = linCom fs vs
+      dif = goal ^-^ now 
+  in if dif ~= zero then fs else iterativeLinearCombination (n-1) goal vs $ updateCoefficients dif vs fs
+
+updateCoefficients :: Vec -> [Vec] -> [Float] -> [Float]
+updateCoefficients = zipWith . updateCoefficient
+
+updateCoefficient :: Vec -> Vec -> Float -> Float
+updateCoefficient dif v f | v ~= zero = f
+updateCoefficient dif v f = 
+  let d = project dif v
+      x = d - f
+      fraction = 0.3
+  in capSpeed $ f + fraction * x
+
+linCom :: [Float] -> [Vec] -> Vec  
+linCom fs vs = foldr (^+^) zero $ zipWith (*^) fs vs
+
+project :: Vec -> Vec -> Float
+project a b = a `dot` signorm b
+
+
+
 
 plan :: Second -> Arm -> Second -> Seg -> Vec -> Control
-plan _ _ _ _ _ = replicate (length $ armJoints arm) 0
+plan t0 arm t1 seg vec =
+  let (goalArm, close) = solveInverseKinematics 10 seg arm
+      goalMotion       = inverseVelocity goalArm vec
+      realGoalArm      = setJointVelocities goalMotion goalArm 
+      js = armJoints $ arm
+      gs = armJoints $ realGoalArm
+  in zipWith (planJoint t0 t1) js gs
+     -- planJoint t0 t1 (head js) (head gs) : []
 
+setJointAngles :: [Radian] -> Arm -> Arm
+setJointAngles (r : rs) (Extend l j a) = Extend l (j {jang = r}) $ setJointAngles rs a
+setJointAngles []       (Extend l j a) = error "setJointAngles: Not enough angles."
+setJointAngles []       (End l)        = End l
+setJointAngles (r : rs) (End l)        = error "setJointAngles: Too many angles."
+
+setJointVelocities :: [RadianPerSecond] -> Arm -> Arm
+setJointVelocities (r : rs) (Extend l j a) = Extend l (j {jvel = r}) $ setJointVelocities rs a
+setJointVelocities []       (Extend l j a) = error "setJointVelocities: Not enough velocities."
+setJointVelocities []       (End l)        = End l
+setJointVelocities (r : rs) (End l)        = error "setJointVelocities: Too many velocities."
+
+modAngle :: Float -> Float
+modAngle x = let y = ((x + pi) `mod'` (2 * pi)) - pi
+             in -- trace ("modAngle " ++ show x ++ " = " ++ show y) y
+                y
+
+rotate90 :: Vector 2 Float -> Vector 2 Float
+rotate90 (Vector2 x y) = Vector2 (-y) x
+
+planJoint :: Second -> Second -> Joint -> Joint -> RadianPerSquareSecond
+planJoint t0 t1 (Joint _ u0 v0) (Joint _ u1 v1) = planMotion (t0, modAngle u0, v0) (t1, modAngle u1, v1)
+
+
+planMotion :: DataPoint -> DataPoint -> RadianPerSquareSecond
+planMotion (t0, u0, v0) (t1, u1, v1) = 
+  let Vector4 a b c d = fitCubic (0, u0, v0) (t1 - t0, u1, v1)
+  in 2 * b
+
+{-
+f(t0) = u0
+f'(t0) = v0
+f(t1) = v1
+f'(t1) = v1
+
+f(x) = a x^3 + b x^2 + c x + d
+f'(x) = 3a x^2 + 2b x + c
+f''(x) = 6a x + 2b
+
+a t0^3 + b t0^2 + c t0 + d = u0
+a t1^3 + b t1^2 + c t1 + d = u1
+3a t0^2 + 2b t0 + c = v0
+3a t1^2 + 2b t1 + c = v1
+
+-}
+
+type DataPoint = (Second, Radian, RadianPerSecond)
+
+-- Fit a cubic polynomial, returned as a vector of 4 coefficients.
+fitCubic :: DataPoint -> DataPoint -> Vector 4 Float
+fitCubic (t0, u0, v0) (t1, u1, v1) =
+  let m = Matrix ( Vector4 (Vector4 (    t0 ** 3) (    t0 ** 2) t0 1 )
+                           (Vector4 (    t1 ** 3) (    t1 ** 2) t1 1 )
+                           (Vector4 (3 * t0 ** 2) (2 * t0     )  1 0 )
+                           (Vector4 (3 * t1 ** 2) (2 * t1     )  1 0 )
+                 )
+      r = Vector4 u0 u1 v0 v1
+  in solveLinearSystem m r
+
+solveLinearSystem :: Matrix 4 4 Float -> Vector 4 Float -> Vector 4 Float
+solveLinearSystem m v  | det m /= 0 = inverse' m `mult` v
+                       | otherwise  = Vector4 0 0 0 0 -- is there something more reasonable here?
+-- = inverse' m `mult` v
+
+---------------------
 -- FOR EXERCISE B7 --
+---------------------
+
+{-
 
 action :: Second -> Item -> Arm -> BallState -> Control
 action time item arm ball = plan time arm goalTime goalSeg goalVec
@@ -329,4 +527,53 @@ action time item arm ball = plan time arm goalTime goalSeg goalVec
     goalTime = 8.7
     goalSeg  = OpenLineSegment (Point2 (-0.3) 0.7 :+ ()) (Point2 (-0.3) 0.8 :+ ())
     goalVec  = Vector2 (-1) 0
+  -- first, find a suitable goal position
+  -- then, actually go there
 
+-}
+
+
+
+-- if last thing hit is not table: get the time and location when the all hits the table on our side
+-- predict resulting ball state
+
+-- determine a good location to intercept the ball
+
+-- only when close to the ball (?): decide on speed and angle to return the ball
+
+
+action :: Second -> Item -> Arm -> BallState -> Control
+action time item arm ball = 
+  let foot     = 1.5
+      goalX    = 1.2
+      (t, h)   = interceptBall goalX ball
+      goalTime = time + t
+      goalSeg  = OpenLineSegment (Point2 (goalX - foot) (h - 0.05) :+ ()) (Point2 (goalX - foot) (h + 0.05) :+ ())
+      goalVec  = Vector2 (-1) 0
+  in plan time arm goalTime goalSeg goalVec
+
+
+-- Very rudimentary implementation
+interceptBall :: Meter -> BallState -> (Second, Meter)
+interceptBall x (BallState (Point2 bx by) (Vector2 vx vy))
+  | bx < x && vx <= 0 = (1, by)
+  | bx > x && vx >= 0 = (1, by)
+  | otherwise         = let t = (x - bx) / vx
+                            h = by + t * vy - t ** 2
+                            h' | h < 0.5   = 1 - h
+                               | otherwise = h
+                        in (t, h')
+
+{-
+gravity :: MeterPerSquareSecond
+gravity = 2
+
+f (x) = a x^2 + b x + c
+
+f'' (x) = -2 = 2a => a = -1
+
+f' (x) = 2a x + b = -2x + b
+f' (0) = b = dy
+
+f (x) = - x^2 + dy x + y
+-}

@@ -26,6 +26,8 @@ type Second                = Float
 type RadianPerSecond       = Float
 type RadianPerSquareSecond = Float
 type Meter                 = Float
+type MeterPerSecond        = Float
+type MeterPerSquareSecond  = Float
 
 type Pnt = Point 2 Float
 type Vec = Vector 2 Float

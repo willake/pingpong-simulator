@@ -5,8 +5,10 @@ import PingPong.Grading.B5.Types
 import PingPong.Model hiding (score)
 import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
-import PingPong.Submission
+import PingPong.Submission hiding (catchErrorCall, catchInterfaceException, catchExceptions)
+import PingPong.Communication.Types
 import PingPong.Communication.Interface
+
 import PingPong.Simulation.Collision
 
 import Data.List
@@ -72,31 +74,27 @@ writePnt (Point2 x y) = "(" ++ show x ++ "," ++ show y ++ ")"
 testInverse :: (Arm -> Seg -> IO (Maybe [Radian])) -> (Arm -> IO [Pnt]) -> TestCase -> IO TestResult
 testInverse inverter evaluator (ref, (arm, seg), possible) = catchExceptions $ do
   givenAnswer <- inverter arm seg
-  case givenAnswer of Nothing -> do let val | possible  = 3
+  case givenAnswer of Nothing -> do let sco | possible  = 0
                                             | otherwise = 2
-                                        sco | possible  = 0
-                                            | otherwise = val
                                         mes | possible  = "incorrect result: not possible should have been possible"
                                             | otherwise = "correct result: not possible"
-                                        result = TestResult { trid    = tcid ref
+                                        result = testResult { trid    = tcid ref
                                                             , success = True
                                                             , score   = sco
                                                             , message = mes
                                                             }                          
                                     return result
-                      Just rs -> if length rs /= length (armJoints arm) then return $ TestResult (tcid ref) 0 True $ "wrong number of angles: " ++ writeAngles rs ++ " for an arm with " ++ show (length $ armJoints arm) ++ " joints"
+                      Just rs -> if length rs /= length (armJoints arm) then return $ TestResult (tcid ref) 0 True ("wrong number of angles: " ++ writeAngles rs ++ " for an arm with " ++ show (length $ armJoints arm) ++ " joints") []
                             else do let newArm = applyJointAngles rs arm
                                     points <- evaluator newArm
                                     let newSeg = OpenLineSegment ((last . init) points :+ ()) (last points :+ ())
                                         correct = newSeg ~= seg || flipSegment newSeg ~= seg
-                                        val | possible  = 3
-                                            | otherwise = 2
-                                        sco | correct   = val
+                                        sco | correct   = 3
                                             | otherwise = 0
                                         mes | correct   = "correct result: " ++ writeAngles rs ++ " leads to " ++ writeSeg newSeg
                                             | otherwise = "incorrect result: " ++ writeAngles rs ++ " leads to " ++ writeSeg newSeg
                                                                                                  ++ " but should be " ++ writeSeg seg
-                                        result = TestResult { trid    = tcid ref
+                                        result = testResult { trid    = tcid ref
                                                             , success = True
                                                             , score   = sco
                                                             , message = mes

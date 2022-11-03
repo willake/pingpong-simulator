@@ -14,7 +14,6 @@ import Data.Fixed
 import Data.Ext
 import Data.List hiding (intersect)
 import Data.Foldable
-import Control.Lens hiding (snoc)
 
 import Convert
 
@@ -24,7 +23,10 @@ import Debug.Trace
 
 import System.Random
 import System.Process
+
+import Control.Lens hiding (snoc)
 import Control.Concurrent
+import Control.Exception
 
 
 validatePlayer :: Player -> IO ()

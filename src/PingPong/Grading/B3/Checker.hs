@@ -5,7 +5,8 @@ import PingPong.Grading.B3.Types
 import PingPong.Model hiding (score)
 import PingPong.Model.AlmostEqual
 import PingPong.Grading.Types
-import PingPong.Submission
+import PingPong.Submission hiding (catchErrorCall, catchInterfaceException, catchExceptions)
+import PingPong.Communication.Types
 import PingPong.Communication.Interface
 
 import Data.Geometry hiding (init, head, replicate)
@@ -76,7 +77,7 @@ testControl controller (ref, Left (s, c, a), Left correctAnswer) = catchExceptio
           | otherwise = length $ filter id $ zipWith (~=) gJoints cJoints
       mes | correct   = "correct result: " ++ writeArm givenAnswer
           | otherwise = "incorrect result: " ++ writeArm givenAnswer ++ " should have been " ++ writeArm correctAnswer      
-      result = TestResult { trid    = tcid ref
+      result = testResult { trid    = tcid ref
                           , success = True
                           , score   = sco
                           , message = mes
@@ -95,7 +96,7 @@ testEval evaluator (ref, Right arm, Right correctAnswer) = catchExceptions $ do
       sco = length $ filter id $ drop 2 $ zipWith (~=) givenAnswer correctAnswer
       mes | correct   = "correct result: " ++ writePnts givenAnswer
           | otherwise = "incorrect result: " ++ writePnts givenAnswer ++ " should have been " ++ writePnts correctAnswer      
-      result = TestResult { trid    = tcid ref
+      result = testResult { trid    = tcid ref
                           , success = True
                           , score   = sco
                           , message = mes

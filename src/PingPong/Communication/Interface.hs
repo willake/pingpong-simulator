@@ -8,6 +8,7 @@ import PingPong.Model hiding (prepare, terminate)
 import PingPong.Player
 import PingPong.Submission
 import PingPong.Simulation.Collision
+import PingPong.Communication.Types
 import PingPong.Communication.JSON
 
 import Network.Simple.TCP
@@ -32,14 +33,10 @@ import Foreign.C.String
 import Data.Colour
 import Data.Colour.Names
 
--- If you are using the haskell-only version, comment the following lines and instead use:
--- callpython = undefined
+
 foreign import ccall "PingPong/C/player.h callpython"
   callpython :: CString -> IO CString
 
-type Port = Int
-
-data InterfaceException = InterfaceException String deriving (Show, Exception)
 
 -- | Given a unique and the filepath to a python source file,
 --   create a submission. This does not start a python process yet.

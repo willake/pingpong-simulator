@@ -7,7 +7,11 @@ import qualified PingPong.Model as Player
 import PingPong.Player
 import PingPong.Simulation.Collision
 
+import PingPong.Communication.Types
+
 import Data.Composition
+
+import Control.Exception
 
 -- Native submission type, which collects all functions that students should implement.
 data Submission = Submission
@@ -77,9 +81,9 @@ makePlayer sub = do
     , Player.initArm   = a
     , Player.foot      = 1.5
     , Player.prepare   = return () -- should not be needed anymore...?
-    , Player.dance     = \s a          -> validateControl a $ danceIO sub s a
-    , Player.stretch   = \s a          -> validateControl a $ defaultStretch s a
-    , Player.action    = \s (_, i) b a -> validateControl a $ actionIO sub s i a b
+    , Player.dance     = \s a          -> catchExceptions $ validateControl a $ danceIO sub s a
+    , Player.stretch   = \s a          -> catchExceptions $ validateControl a $ defaultStretch s a
+    , Player.action    = \s (_, i) b a -> catchExceptions $ validateControl a $ actionIO sub s i a b
     }
 
 setJointAngles :: [Radian] -> Arm -> Arm
@@ -104,3 +108,13 @@ validateControl a ioc = do
                                   return $ replicate n 0
           | otherwise        = return c
   res
+
+catchExceptions :: IO Control -> IO Control
+catchExceptions = handle catchErrorCall
+                . handle catchInterfaceException
+
+catchInterfaceException :: InterfaceException -> IO Control
+catchInterfaceException e = return $ repeat 0
+
+catchErrorCall :: ErrorCall -> IO Control
+catchErrorCall e = return $ repeat 0

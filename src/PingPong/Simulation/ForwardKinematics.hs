@@ -130,6 +130,9 @@ armSegments ev p f = do
 
 
 
+armVelocity :: Arm -> [Vec]
+armVelocity arm = motionVelocity (map jvel $ armJoints arm) arm
+
 -- Given a set of angular speeds, compute the resulting speeds of all joints.
 motionVelocity :: Motion -> Arm -> [Vector 2 Float]
 motionVelocity fs arm = computeVelocity $ zip (evaluateArm arm) ([0] ++ fs ++ [0])
@@ -146,3 +149,6 @@ zero = toVec origin
 
 rotate90 :: Vector 2 Float -> Vector 2 Float
 rotate90 (Vector2 x y) = Vector2 (-y) x
+
+rotate270 :: Vector 2 Float -> Vector 2 Float
+rotate270 (Vector2 x y) = Vector2 y (-x)

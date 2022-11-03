@@ -142,18 +142,30 @@ playerTransform d False = scaleBy (Vector2 (-1) 1) . translateBy (Vector2 d 0)
 
 drawLink :: Link -> Point 2 Float -> Point 2 Float -> Drawing
 drawLink l p q = withColor (convertColor $ lcol l)
-               $ R.stroke linkWidth R.JoinRound (R.CapRound, R.CapRound) 
-               $ R.line (rasterify p) (rasterify q)
+               $ drawSegment $ OpenLineSegment (p :+ ()) (q :+ ())
 
 drawJoint :: Joint -> Point 2 Float -> Drawing
 drawJoint j p = withColor (convertColor $ jcol j)
               $ R.fill
               $ R.circle (rasterifyPoint p) jointRadius
 
+drawSegment :: LineSegment 2 x Float -> Drawing
+drawSegment seg = R.stroke linkWidth R.JoinRound (R.CapRound, R.CapRound) 
+                $ R.line (rasterify $ seg ^. start . core) (rasterify $ seg ^. end . core)
 
+drawArrow :: Float -> LineSegment 2 x Float -> Drawing
+drawArrow d seg = do let p = seg ^. start . core
+                         q = seg ^. end   . core
+                         v = signorm $ q .-. p
+                         l = q .-^ (d *^ v) .+^ (0.5 * d *^ rotate90 v)
+                         r = q .-^ (d *^ v) .+^ (0.5 * d *^ rotate270 v)
+                     R.stroke linkWidth R.JoinRound (R.CapRound, R.CapRound) $ R.line (rasterify p) (rasterify q)
+                     R.stroke linkWidth R.JoinRound (R.CapRound, R.CapRound) $ R.polygon $ map rasterify [l, q, r] 
+                     R.fill $ R.polygon $ map rasterify [l, q, r] 
 
 withColor :: Color -> Drawing -> Drawing
 withColor c = R.withTexture $ uniformTexture c
+
 
 -- rasterifySegment
 
