@@ -495,8 +495,44 @@ def fitCubic(p0: DataPoint, p1: DataPoint):
 
 #Exercise 7
 def action(time: Second, item: Item, arm: Arm, ball: BallState) -> Control:
-    goalTime = 8.7
-    goalSeg = Seg(Pnt(-0.3, 0.7), Pnt(-0.3, 0.8))
-    goalVel = Vec(-1, 0)
+    bat = evaluateArm(arm)[-2:]
+    batPos = bat[0] + ((bat[1] - bat[0]) / 2) + Vec(1.5, 0)
+
+    if item is not Item.TABLE_SELF or batPos.x < ball.location.x:
+        goalTime = time + (5 / 60)
+        h = clamp(ball.location.y, 0.7, 0.8)
+        goalPos = Pnt(1.4, 0) - Vec(1.5, 0) + Vec(0, h)
+        goalSeg = Seg(
+            goalPos + Vec(-0.05 * 4 / 3, -0.05 * 5 / 3),
+            goalPos + Vec(0.05 * 4 / 3, 0.05 * 5 / 3)
+        )
+        # goalSeg = Seg(
+        #     goalPos + Vec(0, -0.05),
+        #     goalPos + Vec(0, 0.05)
+        # )
+        goalVel = Vec(0, 0)
+    else:
+        goalTime = time + (20 / 60)
+        goalPos = ball.location - Vec(1.5, 0) + Vec(-0.25, 0.25)
+        goalSeg = Seg(
+            goalPos + Vec(-0.05 * 4 / 3, -0.05 * 5 / 3),
+            goalPos + Vec(0.05 * 4 / 3, 0.05 * 5 / 3)
+        )
+        # goalSeg = Seg(
+        #     goalPos + Vec(0, -0.05),
+        #     goalPos + Vec(0, 0.05)
+        # )
+        goalVel = Vec(-0.1, 0)
 
     return plan(time, arm, goalTime, goalSeg, goalVel)
+
+    return plan(time, arm, goalTime, goalSeg, goalVel)
+
+def clamp(value: float, min: float, max: float):
+    v = min + (value / 2) * (max - min)
+
+    if v > max:
+        return max
+    if v < min:
+        return min
+    return v

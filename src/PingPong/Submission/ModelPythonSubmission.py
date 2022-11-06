@@ -492,8 +492,17 @@ def fitCubic(p0: DataPoint, p1: DataPoint):
 
 #Exercise 7
 def action(time: Second, item: Item, arm: Arm, ball: BallState) -> Control:
-    goalTime = 8.7
-    goalSeg = Seg(Pnt(-0.3, 0.7), Pnt(-0.3, 0.8))
-    goalVel = Vec(-1, 0)
+    # goalTime = 8.7
+    bat = evaluateArm(arm)[-2:-1]
+    mid = bat[1] + bat[0] / 2
+    vec = ball.location - mid
+    goalPos = mid + (vec * (50 / 60))
+    goalSeg = Seg(
+        goalPos + Vec(-0.05 / math.sqrt(2), -0.05 / math.sqrt(2)),
+        goalPos + Vec(0.05 / math.sqrt(2), 0.05 / math.sqrt(2))
+    )
+    goalVel = Vec(-2, 0)
 
-    return plan(time, arm, goalTime, goalSeg, goalVel)
+    return plan(time, arm, time + (50 / 60), goalSeg, goalVel)
+
+    # return plan(time, arm, goalTime, goalSeg, goalVel)
